@@ -29,7 +29,7 @@ sum(SON_AHD_Edit$Sec_8_Reported,na.rm=T)
 
 
 #-------------------------- Read in the County Census Tract Polygon File --------------------------------------#
-SON_Census_Poly <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "Sonoma")
+SON_Census_Poly <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "SON_Census_Tract")
 
 str(SON_Census_Poly)
 plot(SON_Census_Poly)
