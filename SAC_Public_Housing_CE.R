@@ -19,17 +19,18 @@ library(units)
 #----------------------- MAX Section 8 Housing Data by YEAR and Generate a DF by Census Tract ID --------------------------#
 # Data Directory: C:\Users\admin\Box Sync\Default Sync Folder\Projects\NSF_CNH\HUD_Analysis\Section8\SAC_AHD.csv
 
-SAC_AHD <- read_csv("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/Tables_IN/SAC_AHD.csv")
-SAC_AHD_MAX <- SAC_AHD %>% group_by(CODE) %>% filter(YEAR == max(YEAR)) 
-SAC_AHD_Edit <- SAC_AHD_MAX  %>% select(Tract_Num = CODE,YEAR,Sec_8_Reported = NUMBER_REPORTED)
+SAC_AHD <- read.csv("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/Tables_In/SAC_HUD.csv", stringsAsFactors=FALSE)
+SAC_AHD_MAX <- SAC_AHD %>% group_by(GIS_JOIN) %>% filter(YEAR == max(YEAR)) 
+SAC_AHD_Edit <- SAC_AHD_MAX  %>% select(Tract_Num = GIS_JOIN,YEAR,Sec_8_Reported = NUMBER_REPORTED)
 #Summarize the number of section 8 units as check compare to later.
-colSums(SAC_AHD_Edit,na.rm=T)
+sum(SAC_AHD_Edit$Sec_8_Reported,na.rm=T)
 
 #------------------------------------ END -----------------------------------#
 
 
 #-------------------------- Read in the County Census Tract Polygon File --------------------------------------#
 SAC_Census_Poly <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "SAC_Census_Tract")
+SAC_Census_Poly$Tract_Num <- as.numeric(as.character(SAC_Census_Poly$GISJOIN2))
 str(SAC_Census_Poly)
 plot(SAC_Census_Poly)
 summary(SAC_Census_Poly)
@@ -45,13 +46,14 @@ attributes(SAC_Census_Poly)
 
 # Uses SP package to merge --- A bit scary, but you do not have to define the join attribute ------ Assume that since Tract_Num is common between the two data sets that is being used -----
 SAC_Census_AHD <- sp:::merge(SAC_Census_Poly, SAC_AHD_Edit)
+
 # Specifies parameters for shapefile export 
 #SAC_out_shape  = tempfile(pattern = "SAC_AHD_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
-sf:::st_write(SAC_Census_AHD, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SAC_Census_AHD.shp")
+sf:::st_write(SAC_Census_AHD, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SAC_Census_AHD.shp", delete_layer=TRUE)
 #Plot to Check 
 plot(SAC_Census_AHD[c("Sec_8_Reported")])
-
+sum(SAC_Census_AHD$Sec_8_Reported,na.rm=T)
 
 
 #----------------------------------- End ------------------------------------#
@@ -59,15 +61,14 @@ plot(SAC_Census_AHD[c("Sec_8_Reported")])
 #------------------------------ Summarize and Merge Geocoded Tax Credit with Section 8 and add back to County Census Tract Poly ----------------------------------#
 
 #Open Geocoded Tax Credit
-gdb <- "HUD_working.gdb"
-SAC_TAX_point <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/HUD_working.gdb", layer = "SAC_Tax_Credit")
+SAC_TAX_point <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "SAC_Tax_Credit")
 
 #Checks to see if there are any duplicates in USER_HUD_ID_NUMBER, if so, need to examine 
 #further as there may be multiple years that need to be addressed. 
-SAC_TAX_point %>% filter(duplicated(.[["USER_HUD_ID_Number"]]))
+SAC_TAX_point %>% filter(duplicated(.[["USER_HUD_I"]]))
 
 #Summarize the number of units as check for later.
-summarise(SAC_TAX_point, sum(USER_Low_Income_Units))
+summarise(SAC_TAX_point, sum(USER_Low_I))
 
 #Spatial Join between Section 8 (Census Tract) with Geocoded Tax Credit (Address - Point). Runs an Intersect
 SAC_AHD_Tax <- sf:::st_join(SAC_Census_AHD,SAC_TAX_point)
@@ -75,19 +76,19 @@ SAC_AHD_Tax <- sf:::st_join(SAC_Census_AHD,SAC_TAX_point)
 #Export result to a shapefile
 #SAC_out_shape_TAX  = tempfile(pattern = "SAC_AHD_TAX_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
-sf::st_write(SAC_AHD_Tax, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SAC_AHD_TAX.shp")
+sf::st_write(SAC_AHD_Tax, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SAC_AHD_TAX.shp", delete_layer=TRUE)
 #Plot to Check 
 plot(SAC_AHD_Tax[c("Sec_8_Reported")])
-plot(SAC_AHD_Tax[c("USER_Number_Units")])
+plot(SAC_AHD_Tax[c("USER_Numbe")])
 
 #The Spatial Join results in multiple points in a census tract. Need to summarize by census tract
-SAC_AHD_Tax_Sum <- SAC_AHD_Tax %>% group_by(Tract_Num) %>% summarise(Tax_Units_reported = sum(USER_Low_Income_Units))
+SAC_AHD_Tax_Sum <- SAC_AHD_Tax %>% group_by(Tract_Num) %>% summarise(Tax_Units_reported = sum(USER_Low_I))
 SAC_AHD_Tax_Edit <- SAC_AHD_Tax  %>% select(Tract_Num,Sec_8_Reported) %>% distinct(Tract_Num, .keep_all = TRUE)
 
 #Generate tabular data. Drops geometry
 st_geometry(SAC_AHD_Tax_Sum) <- NULL
 #Summarize the number of units as check compare to earlier sum.
-colSums(SAC_AHD_Tax_Sum,na.rm=T)
+sum(SAC_AHD_Tax_Sum$Tax_Units_reported,na.rm=T)
 
 #Generate tabular data. Drops geometry
 st_geometry(SAC_AHD_Tax_Edit) <- NULL
@@ -95,8 +96,8 @@ st_geometry(SAC_AHD_Tax_Edit) <- NULL
 #Run a join
 SAC_AHD_Tax_tabular_join <- inner_join(SAC_AHD_Tax_Edit,SAC_AHD_Tax_Sum, by="Tract_Num")
 #Summarize the number of units as check compare to earlier sum.
-colSums(SAC_AHD_Tax_tabular_join,na.rm=T)
-
+sum(SAC_AHD_Tax_tabular_join$Tax_Units_reported,na.rm=T)
+sum(SAC_AHD_Tax_tabular_join$Sec_8_Reported,na.rm=T)
 
 
 #Spatial Join between Section 8 (Census Tract) with Geocoded Tax Credit (Address - Point). Runs an Intersect
@@ -154,7 +155,7 @@ ggplot() + geom_sf(data = SAC_AHD_Tax_spatial_join_FINAL)
 #Export result to a shapefile
 #SAC_AHD_Tax_spatial_join_FINAL_shp  = tempfile(pattern = "SAC_AHD_Tax_spatial_join_FINAL_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
-sf::st_write(SAC_AHD_Tax_spatial_join_FINAL, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SAC_AHD_Tax_spatial_join_FINAL.shp")
+sf::st_write(SAC_AHD_Tax_spatial_join_FINAL, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SAC_AHD_Tax_spatial_join_FINAL.shp",  delete_layer=TRUE)
 
 #Export data frame only
 SAC_AHD_Tax_spatial_join_FINAL_table <- dplyr::select(as.data.frame(SAC_AHD_Tax_spatial_join_FINAL), -geometry, -row.id)
@@ -163,6 +164,7 @@ write.csv(SAC_AHD_Tax_spatial_join_FINAL_table, "C:/Users/admin/Box Sync/Default
 #Drop geometry
 st_geometry(SAC_AHD_Tax_spatial_join_FINAL) <- NULL
 #Summarize the number of units as check compare to earlier sum.
-colSums(SAC_AHD_Tax_tabular_join,na.rm=T)
- 
+sum(SAC_AHD_Tax_tabular_join$Tax_Units_reported,na.rm=T)
+sum(SAC_AHD_Tax_tabular_join$Sec_8_Reported,na.rm=T)
+
 #----------------------------------- End Of Script ------------------------------------#

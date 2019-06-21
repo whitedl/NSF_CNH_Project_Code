@@ -19,7 +19,7 @@ library(units)
 #----------------------- MAX Section 8 Housing Data by YEAR and Generate a DF by Census Tract ID --------------------------#
 # Data Directory: C:\Users\admin\Box Sync\Default Sync Folder\Projects\NSF_CNH\HUD_Analysis\Section8\SON_AHD.csv
 
-SON_AHD <- read_csv("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/Tables_In/SON_HUD.csv")
+SON_AHD <- read.csv("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/Tables_In/SON_HUD.csv", stringsAsFactors=FALSE)
 SON_AHD_MAX <- SON_AHD %>% group_by(GIS_JOIN) %>% filter(YEAR == max(YEAR)) 
 SON_AHD_Edit <- SON_AHD_MAX  %>% select(Tract_Num = GIS_JOIN,YEAR,Sec_8_Reported = NUMBER_REPORTED)
 #Summarize the number of section 8 units as check compare to later.
@@ -30,7 +30,7 @@ sum(SON_AHD_Edit$Sec_8_Reported,na.rm=T)
 
 #-------------------------- Read in the County Census Tract Polygon File --------------------------------------#
 SON_Census_Poly <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "SON_Census_Tract")
-
+SON_Census_Poly$Tract_Num <- as.numeric(as.character(SON_Census_Poly$GISJOIN2))
 str(SON_Census_Poly)
 plot(SON_Census_Poly)
 summary(SON_Census_Poly)
@@ -46,13 +46,14 @@ attributes(SON_Census_Poly)
 
 # Uses SP package to merge --- A bit scary, but you do not have to define the join attribute ------ Assume that since Tract_Num is common between the two data sets that is being used -----
 SON_Census_AHD <- sp:::merge(SON_Census_Poly, SON_AHD_Edit)
+
 # Specifies parameters for shapefile export 
 #SON_out_shape  = tempfile(pattern = "SON_AHD_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
 sf:::st_write(SON_Census_AHD, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SON_Census_AHD.shp", delete_layer=TRUE)
 #Plot to Check 
 plot(SON_Census_AHD[c("Sec_8_Reported")])
-
+sum(SON_Census_AHD$Sec_8_Reported,na.rm=T)
 
 
 #----------------------------------- End ------------------------------------#
@@ -154,7 +155,7 @@ ggplot() + geom_sf(data = SON_AHD_Tax_spatial_join_FINAL)
 #Export result to a shapefile
 #SON_AHD_Tax_spatial_join_FINAL_shp  = tempfile(pattern = "SON_AHD_Tax_spatial_join_FINAL_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
-sf::st_write(SON_AHD_Tax_spatial_join_FINAL, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SON_AHD_Tax_spatial_join_FINAL.shp")
+sf::st_write(SON_AHD_Tax_spatial_join_FINAL, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/SON_AHD_Tax_spatial_join_FINAL.shp",  delete_layer=TRUE)
 
 #Export data frame only
 SON_AHD_Tax_spatial_join_FINAL_table <- dplyr::select(as.data.frame(SON_AHD_Tax_spatial_join_FINAL), -geometry, -row.id)
