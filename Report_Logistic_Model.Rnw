@@ -1,0 +1,156 @@
+\documentclass{article}
+\usepackage{rotating}
+\usepackage{graphicx, color, framed, alltt}
+\usepackage{fullpage}
+\usepackage{pdflscape}
+\usepackage{placeins}
+\usepackage{longtable}
+\begin{document}
+
+
+\section*{Analaysis of Public Housing and Proximity to CE}
+
+\textbf{Original Analysis} \\
+\textbf{By: D. White}\\
+\textbf{Date: 2019-06-27}\\
+\\
+----------------------------\\
+\\
+KNITR File: Report\textunderscore Logistic\textunderscore Model.Rnw \\
+<<timestamp, echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+  paste0("Generated on: ", Sys.time())
+
+@
+  
+<<Library, echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(sf)
+library(dplyr)
+library(reshape2)
+library(stargazer)
+library(pscl)
+library(kableExtra)
+
+setwd("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out")
+@
+
+
+<<data_prep, echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+# build a dataset of all data ---------------------------------------------
+# the county abbreviations
+cnty <- c("ALB","BLD","CHS","DGL","GVL","LDN","LEB","MES", "SAC", "SON","WAS","YRK")
+
+df_list <- list()
+dir <- ("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/")
+for (i in 1:12) {
+  cuce <- read.csv(paste0("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/",cnty[i], "_AHD_Tax_spatial_join_FINAL_table.csv"), stringsAsFactors = F)[,9:11]
+  cuce[is.na(cuce)] <- 0
+  cuce <- mutate(cuce, County_ID = cnty[i])
+  df_list[[i]] <- cuce
+  
+}
+
+# combine all of the county data
+alldata <- bind_rows(df_list) %>% select(Sec_8_Reported, Tax_Units_reported, CE_Present, County_ID)
+alldata_edit <- alldata
+
+alldata_edit$CE_Present <- as.character(alldata$CE_Present)
+
+alldata_edit <- alldata_edit %>% mutate(CE_Present = recode(CE_Present, '0' = 'No CE', '1' = 'CE')) 
+
+alldata_edit_melt <- melt(alldata_edit[,c('Sec_8_Reported', 'Tax_Units_reported', 'CE_Present', 'County_ID')])
+@
+
+Methods: A multistep data processing routine was performed for each county to integrate spatial and tabular data at a census tract level by county level. The final tabular data set for each county is presented in this analysis.\\ 
+
+The data processing by county can be found in the path below.\\ 
+C:\textbackslash Users\textbackslash admin\textbackslash Documents\textbackslash R\textunderscore Code\textbackslash HUD\textunderscore Project\textunderscore Code\textbackslash CNTYNAME\textunderscore Public\textunderscore Housing\textunderscore CE.R\\
+
+Table 1 shows the coefficient estimates and related information that result from fitting a logistic regression to predict the probability of a CE located in a census tract based on the predictors Section 8 and Tax Credit housing counts in the corresponding census tracts. A positive coefficent will indicate that an increase in public housing is associated with an increase in the probability of a CE in a given Census Tract. A negative coefficent will imply that increased numbers of public housing units are associated with a decreased probability of a CE in a census tract. A highly significant negative effect is observed for Section 8 housing (P$<$.01) while a positive significant effect (P$<$.05) is observed for Tax Credit housing.\\
+
+Table 2 reports a NULL model deviance of 1093. A residual deviance of 1032 is observed.\\ 
+
+A McFadden statistic is reported in table 3. The McFadden statisitic is complementary to a linear regression R2 value. A value of 0.068 indicates a relatively poor model fit. Although not as severe if it were an OLS R2 value.\\  
+
+Observations: 1. Many zeros are present in the Tax Credit housing. Originally, these were coded as NA, but that was an error. 2. I examined other model derivatives such as each predictor alone and an interaction effect. Those other models were even less compelling. 3. Overall, I do not find this to be a strong model. But my limited experience with logistic/categorical modeling could be an issue. 
+
+
+\pagebreak
+<<BoxPlot_All_Units, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+ggplot(alldata_edit_melt, aes(x = CE_Present, y = value, fill = variable)) + geom_boxplot() +
+facet_wrap(~ County_ID) + scale_fill_manual(values = c("orange", "blue")) + labs(title = "Housing Units Reported by Census Tract (note: zeros dropped)", x='', y='Counts') + theme(plot.title = element_text(hjust = 0.5), legend.position="bottom", legend.title = element_blank()) + scale_y_log10()
+
+ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Housing_Units_Reported_Census Tract.pdf", width = 10, height = 8)
+@
+
+
+<<MultiPlot_SEC_8_Counts, fig.cap='Section 8 Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+ggplot(alldata_edit) + geom_bar(aes(x=CE_Present,y=Sec_8_Reported, fill=CE_Present), stat="identity", width = .5, show.legend = FALSE) + coord_flip() +
+  scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
+  labs(title = "Section 8 Units Reported by Census Tract", x='', y='Counts') +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ))
+
+ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Section_8_Units_by_CNTY.pdf", width = 10, height = 8)
+@
+
+
+<<MultiPlot_Tax_Units_Counts, fig.cap='Tax Credit Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+ggplot(alldata_edit) + geom_bar(aes(x=CE_Present,y=Tax_Units_reported, fill=CE_Present), stat="identity", width = .5, show.legend = FALSE) + coord_flip() +
+  scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
+  labs(title = "Tax Credit Units Reported by Census Tract", x='', y='Counts') +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ))
+
+ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Tax_Credit_Units_by_CNTY.pdf", width = 10, height = 8)
+@
+
+<<MultiPlot_All_Units_Counts_stacked, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+ggplot(alldata_edit_melt) + geom_bar(aes(x=CE_Present,y=value, fill=variable), stat="identity", width = .5, show.legend = TRUE) + coord_flip() +
+  scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
+  labs(title = "Housing Units Reported by Census Tract", x='', y='Counts') +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ), legend.position="bottom", legend.title = element_blank())
+
+ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Stacked_by_CNTY.pdf", width = 10, height = 8)
+@
+
+
+<<MultiPlot_All_Units_Counts_dodge, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+
+#Using both dodge and stack, but you can't do both. So the best thing is to summarize the data.
+alldata_edit_melt_sum <- aggregate(alldata_edit_melt$value, by=list(alldata_edit_melt$CE_Present, alldata_edit_melt$County_ID, alldata_edit_melt$variable), FUN=sum)
+
+#Update column labels.
+colnames(alldata_edit_melt_sum) <- c("CE_Present", "County_ID", "variable","value")
+
+ggplot(alldata_edit_melt_sum) + geom_bar(aes(x=CE_Present,y=value, fill=variable, group=), stat="identity", position="dodge",  width = .5, show.legend = TRUE) + coord_flip() +
+  scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
+  labs(title = "Housing Units Reported by Census Tract", x='', y='Counts') +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ), legend.position="bottom", legend.title = element_blank())
+
+ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Grouped_by_CNTY.pdf", width = 10, height = 8)
+@
+
+
+<<Logistic_Model1_Sec_8, results='asis', echo=FALSE>>=
+#----------------------------------------------------------- Regression Model ------------------------------------------------------#
+model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data=alldata)
+stargazer(model1, title="Regression Results: Section 8 Housing", align=TRUE)
+@
+
+<<Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE>>=
+
+model_anova <- anova(model1, test="Chisq")
+stargazer(model_anova, title = "Analysis of Deviance", align = TRUE)
+@
+
+<<Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE>>=
+model_pR2 <- pR2(model1)
+stargazer(model_pR2, title="McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+
+\end{document}
+
+
+
+
