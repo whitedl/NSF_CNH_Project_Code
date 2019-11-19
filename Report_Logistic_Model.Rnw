@@ -8,14 +8,15 @@
 \begin{document}
 
 
-\section*{Analaysis of Public Housing and Proximity to CE}
 
-\textbf{Original Analysis} \\
+\section*{Analaysis of Public Housing in County Census Tracts and \\Proximity to CE(s)}
+
+\textbf{Original Analysis}\\
 \textbf{By: D. White}\\
-\textbf{Date: 2019-06-27}\\
+\textbf{Date: 2019-11-13}\\
 \\
 ----------------------------\\
-\\
+\break
 KNITR File: Report\textunderscore Logistic\textunderscore Model.Rnw \\
 <<timestamp, echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
   paste0("Generated on: ", Sys.time())
@@ -30,20 +31,21 @@ library(reshape2)
 library(stargazer)
 library(pscl)
 library(kableExtra)
+library(magrittr)
 
-setwd("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out")
+setwd("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out")
 @
 
 
 <<data_prep, echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 # build a dataset of all data ---------------------------------------------
 # the county abbreviations
-cnty <- c("ALB","BLD","CHS","DGL","GVL","LDN","LEB","MES", "SAC", "SON","WAS","YRK")
+cnty <- c("ALB","BLD","SON","DGL","GVL","LDN","LEB","MES", "SAC", "SON","WAS","YRK")
 
 df_list <- list()
-dir <- ("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/")
+dir <- ("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/")
 for (i in 1:12) {
-  cuce <- read.csv(paste0("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/",cnty[i], "_AHD_Tax_spatial_join_FINAL_table.csv"), stringsAsFactors = F)[,9:11]
+  cuce <- read.csv(paste0("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/",cnty[i], "_AHD_Tax_spatial_join_FINAL_table.csv"), stringsAsFactors = F)[,9:11]
   cuce[is.na(cuce)] <- 0
   cuce <- mutate(cuce, County_ID = cnty[i])
   df_list[[i]] <- cuce
@@ -52,6 +54,9 @@ for (i in 1:12) {
 
 # combine all of the county data
 alldata <- bind_rows(df_list) %>% select(Sec_8_Reported, Tax_Units_reported, CE_Present, County_ID)
+
+alldata %<>% mutate_each(funs(if(is.numeric(.)) as.integer(.) else .))
+
 alldata_edit <- alldata
 
 alldata_edit$CE_Present <- as.character(alldata$CE_Present)
@@ -61,10 +66,10 @@ alldata_edit <- alldata_edit %>% mutate(CE_Present = recode(CE_Present, '0' = 'N
 alldata_edit_melt <- melt(alldata_edit[,c('Sec_8_Reported', 'Tax_Units_reported', 'CE_Present', 'County_ID')])
 @
 
-Methods: A multistep data processing routine was performed for each county to integrate spatial and tabular data at a census tract level by county level. The final tabular data set for each county is presented in this analysis.\\ 
+Methods: A multistep data processing routine was performed for each county to integrate spatial and tabular data sets of CE presence/absence and public housing counts at a census tract level in each county. Data were aggregated to the final observed year for each county. Census tract data and HUD data date to 2000. HUD data include Section-8 vouchers and Low-Income Housing Tax Credit (LIHTC) unit counts in each census tract.The final tabular data set for each county is presented in this analysis. A logistic regression was performed on an all county data set to test the probability of a CE located in census tract dependent upon HUD housing counts (Tables 1-3). Tables 4-30 show results of the logistic regression for each individual county. ALB and DGL were not included in the anlaysis due small sample size. CHS is generating an error that I can not solve at this time. The model appears to run correctly in R as a stand-alone, but when output to Latex it generates the error found on page 8. LEB is of particular interest. \\ 
 
 The data processing by county can be found in the path below.\\ 
-C:\textbackslash Users\textbackslash admin\textbackslash Documents\textbackslash R\textunderscore Code\textbackslash HUD\textunderscore Project\textunderscore Code\textbackslash CNTYNAME\textunderscore Public\textunderscore Housing\textunderscore CE.R\\
+C:\textbackslash Users\textbackslash whitedl\textbackslash Documents\textbackslash R\textunderscore Code\textbackslash HUD\textunderscore Project\textunderscore Code\textbackslash CNTYNAME\textunderscore Public\textunderscore Housing\textunderscore CE.R\\
 
 Table 1 shows the coefficient estimates and related information that result from fitting a logistic regression to predict the probability of a CE located in a census tract based on the predictors Section 8 and Tax Credit housing counts in the corresponding census tracts. A positive coefficent will indicate that an increase in public housing is associated with an increase in the probability of a CE in a given Census Tract. A negative coefficent will imply that increased numbers of public housing units are associated with a decreased probability of a CE in a census tract. A highly significant negative effect is observed for Section 8 housing (P$<$.01) while a positive significant effect (P$<$.05) is observed for Tax Credit housing.\\
 
@@ -76,11 +81,24 @@ Observations: 1. Many zeros are present in the Tax Credit housing. Originally, t
 
 
 \pagebreak
+\newpage
+\FloatBarrier
+
+<<Bar_All_Counties_Tract, fig.cap='Total Census Tracts by County', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+
+ggplot(alldata_edit_melt, aes(x=County_ID)) +
+    geom_bar(stat="count") + labs(title= "Total Census Tracts per County", x="County", y = "Total") +
+    theme(plot.title = element_text(hjust = 0.5))
+
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Census_Tracts_per_County.pdf", width = 10, height = 8)
+@
+
+
 <<BoxPlot_All_Units, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 ggplot(alldata_edit_melt, aes(x = CE_Present, y = value, fill = variable)) + geom_boxplot() +
 facet_wrap(~ County_ID) + scale_fill_manual(values = c("orange", "blue")) + labs(title = "Housing Units Reported by Census Tract (note: zeros dropped)", x='', y='Counts') + theme(plot.title = element_text(hjust = 0.5), legend.position="bottom", legend.title = element_blank()) + scale_y_log10()
 
-ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Housing_Units_Reported_Census Tract.pdf", width = 10, height = 8)
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Housing_Units_Reported_Census Tract.pdf", width = 10, height = 8)
 @
 
 
@@ -90,7 +108,7 @@ ggplot(alldata_edit) + geom_bar(aes(x=CE_Present,y=Sec_8_Reported, fill=CE_Prese
   labs(title = "Section 8 Units Reported by Census Tract", x='', y='Counts') +
   theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ))
 
-ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Section_8_Units_by_CNTY.pdf", width = 10, height = 8)
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Section_8_Units_by_CNTY.pdf", width = 10, height = 8)
 @
 
 
@@ -100,16 +118,16 @@ ggplot(alldata_edit) + geom_bar(aes(x=CE_Present,y=Tax_Units_reported, fill=CE_P
   labs(title = "Tax Credit Units Reported by Census Tract", x='', y='Counts') +
   theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ))
 
-ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Tax_Credit_Units_by_CNTY.pdf", width = 10, height = 8)
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Tax_Credit_Units_by_CNTY.pdf", width = 10, height = 8)
 @
 
 <<MultiPlot_All_Units_Counts_stacked, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 ggplot(alldata_edit_melt) + geom_bar(aes(x=CE_Present,y=value, fill=variable), stat="identity", width = .5, show.legend = TRUE) + coord_flip() +
   scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
-  labs(title = "Housing Units Reported by Census Tract", x='', y='Counts') +
+  labs(title = "All HUD Housing Units Reported by Census Tract", x='', y='Counts') +
   theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ), legend.position="bottom", legend.title = element_blank())
 
-ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Stacked_by_CNTY.pdf", width = 10, height = 8)
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Stacked_by_CNTY.pdf", width = 10, height = 8)
 @
 
 
@@ -123,34 +141,231 @@ colnames(alldata_edit_melt_sum) <- c("CE_Present", "County_ID", "variable","valu
 
 ggplot(alldata_edit_melt_sum) + geom_bar(aes(x=CE_Present,y=value, fill=variable, group=), stat="identity", position="dodge",  width = .5, show.legend = TRUE) + coord_flip() +
   scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
-  labs(title = "Housing Units Reported by Census Tract", x='', y='Counts') +
+  labs(title = "All HUD Housing Units Reported by Census Tract", x='', y='Counts') +
   theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ), legend.position="bottom", legend.title = element_blank())
 
-ggsave("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Grouped_by_CNTY.pdf", width = 10, height = 8)
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Grouped_by_CNTY.pdf", width = 10, height = 8)
 @
 
+\newpage
 
-<<Logistic_Model1_Sec_8, results='asis', echo=FALSE>>=
+\FloatBarrier
+
+<<Logistic_Model1_Sec_8, results='asis', echo=FALSE, message=FALSE>>=
 #----------------------------------------------------------- Regression Model ------------------------------------------------------#
 model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data=alldata)
-stargazer(model1, title="Regression Results: Section 8 Housing", align=TRUE)
+stargazer(model1, title="All Counties: Regression Results: HUD Housing", align=TRUE)
 @
 
-<<Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE>>=
+<<Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
 
 model_anova <- anova(model1, test="Chisq")
-stargazer(model_anova, title = "Analysis of Deviance", align = TRUE)
+stargazer(model_anova, title = "All Counties: Analysis of Deviance", align = TRUE)
 @
 
-<<Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE>>=
+<<Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
 model_pR2 <- pR2(model1)
-stargazer(model_pR2, title="McFadden Statistic:similar to R2", align=TRUE)
+stargazer(model_pR2, title="All Counties: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+<<BLD_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+BLD_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "BLD")
+
+stargazer(BLD_model1, title="BLD Regression Results: HUD Housing", align=TRUE)
+@
+
+<<BLD_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+BLD_model_anova <- anova(BLD_model1, test="Chisq")
+stargazer(BLD_model_anova, title = "BLD: Analysis of Deviance", align = TRUE)
+@
+
+<<BLD_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+BLD_model_pR2 <- pR2(BLD_model1)
+stargazer(BLD_model_pR2, title="BLD: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+
+<<CHS_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+
+# junk <- alldata[ which(alldata$County_ID == 'CHS')]
+
+# CHS_Junk <- as.integer(junk$Tax_Units_reported)
+
+# 
+
+
+CHS_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "CHS")
+
+stargazer(CHS_model1, title="CHS Regression Results: HUD Housing", align=TRUE)
+@
+
+<<CHS_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+CHS_model_anova <- anova(CHS_model1, test="Chisq")
+stargazer(CHS_model_anova, title = "CHS: Analysis of Deviance", align = TRUE)
+@
+
+<<CHS_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+CHS_model_pR2 <- pR2(CHS_model1)
+stargazer(CHS_model_pR2, title="CHS: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+<<GVL_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+GVL_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "GVL")
+
+stargazer(GVL_model1, title="GVL Regression Results: HUD Housing", align=TRUE)
+@
+
+<<GVL_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+GVL_model_anova <- anova(GVL_model1, test="Chisq")
+stargazer(GVL_model_anova, title = "GVL: Analysis of Deviance", align = TRUE)
+@
+
+<<GVL_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+GVL_model_pR2 <- pR2(GVL_model1)
+stargazer(GVL_model_pR2, title="GVL: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+<<LDN_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+LDN_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "LDN")
+
+stargazer(LDN_model1, title="LDN Regression Results: HUD Housing", align=TRUE)
+@
+
+<<LDN_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+LDN_model_anova <- anova(LDN_model1, test="Chisq")
+stargazer(LDN_model_anova, title = "LDN: Analysis of Deviance", align = TRUE)
+@
+
+<<LDN_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+LDN_model_pR2 <- pR2(LDN_model1)
+stargazer(LDN_model_pR2, title="LDN: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+<<LEB_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+LEB_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "LEB")
+
+stargazer(LEB_model1, title="LEB Regression Results: HUD Housing", align=TRUE)
+@
+
+<<LEB_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+LEB_model_anova <- anova(LEB_model1, test="Chisq")
+stargazer(LEB_model_anova, title = "LEB: Analysis of Deviance", align = TRUE)
+@
+
+<<LEB_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+LEB_model_pR2 <- pR2(LEB_model1)
+stargazer(LEB_model_pR2, title="LEB: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+<<MES_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+MES_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "MES")
+
+stargazer(MES_model1, title="MES Regression Results: HUD Housing", align=TRUE)
+@
+
+<<MES_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+MES_model_anova <- anova(MES_model1, test="Chisq")
+stargazer(MES_model_anova, title = "MES: Analysis of Deviance", align = TRUE)
+@
+
+<<MES_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+MES_model_pR2 <- pR2(MES_model1)
+stargazer(MES_model_pR2, title="MES: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+<<SAC_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+SAC_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "SAC")
+
+stargazer(SAC_model1, title="SAC Regression Results: HUD Housing", align=TRUE)
+@
+
+<<SAC_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+SAC_model_anova <- anova(SAC_model1, test="Chisq")
+stargazer(SAC_model_anova, title = "SAC: Analysis of Deviance", align = TRUE)
+@
+
+<<SAC_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+SAC_model_pR2 <- pR2(SAC_model1)
+stargazer(SAC_model_pR2, title="SAC: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+<<SON_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+SON_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "SON")
+
+stargazer(SON_model1, title="SON Regression Results: HUD Housing", align=TRUE)
+@
+
+<<SON_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+SON_model_anova <- anova(SON_model1, test="Chisq")
+stargazer(SON_model_anova, title = "SON: Analysis of Deviance", align = TRUE)
+@
+
+<<SON_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+SON_model_pR2 <- pR2(SON_model1)
+stargazer(SON_model_pR2, title="SON: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+<<WAS_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+WAS_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "WAS")
+
+stargazer(WAS_model1, title="WAS Regression Results: HUD Housing", align=TRUE)
+@
+
+<<WAS_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+WAS_model_anova <- anova(WAS_model1, test="Chisq")
+stargazer(WAS_model_anova, title = "WAS: Analysis of Deviance", align = TRUE)
+@
+
+<<WAS_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+WAS_model_pR2 <- pR2(WAS_model1)
+stargazer(WAS_model_pR2, title="WAS: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+
+<<YRK_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+YRK_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "YRK")
+
+stargazer(YRK_model1, title="YRK Regression Results: HUD Housing", align=TRUE)
+@
+
+<<YRK_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+
+YRK_model_anova <- anova(YRK_model1, test="Chisq")
+stargazer(YRK_model_anova, title = "YRK: Analysis of Deviance", align = TRUE)
+@
+
+<<YRK_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+YRK_model_pR2 <- pR2(YRK_model1)
+stargazer(YRK_model_pR2, title="YRK: McFadden Statistic:similar to R2", align=TRUE)
 @
 
 
 
 \end{document}
-
-
-
 
