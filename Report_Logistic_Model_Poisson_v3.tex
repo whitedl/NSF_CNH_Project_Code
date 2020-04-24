@@ -72,7 +72,7 @@ KNITR File: Report\textunderscore Logistic\textunderscore Model.Rnw \\
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{verbatim}
-## [1] "Generated on: 2020-04-15 10:12:14"
+## [1] "Generated on: 2020-04-23 16:49:58"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -82,23 +82,44 @@ KNITR File: Report\textunderscore Logistic\textunderscore Model.Rnw \\
 
 
 
-Methods: A multistep data processing routine was performed for each county to integrate spatial and tabular data sets of CE presence/absence and public housing counts at a census tract level in each county. Data were aggregated to the final observed year for each county. Census tract data and HUD data date to 2000. HUD data include Section-8 vouchers and Low-Income Housing Tax Credit (LIHTC) unit counts in each census tract.The final tabular data set for each county is presented in this analysis. A logistic regression was performed on an all county data set to test the probability of a CE located in census tract dependent upon HUD housing counts (Tables 1-4). Tables 5-34 show results of the logistic regression for each individual county. ALB and DGL were not included in the anlaysis due small sample size. Results for LEB is of particular interest. \\ 
+Methods: A multi-step data processing routine was performed for each county to integrate spatial and tabular data sets. Census tract data were spatially joined with CEs, Section-8 voucher housing units, and Low-Income Housing Tax Credit (LIHTC) units. 
+\\
+
+Processing Steps:\\
+HUD Housing Data\\
+1. Section-8 Voucher Data downloaded and aggregated from HUD website for each county (2000-2008)(see Assisted\textunderscore Housing\textunderscore Data.csv)\\
+Section-8 Voucher data are spatially located by census tract. Primary data attributes included a census tract "CODE", "YEAR", "NUMBER\textunderscore REPORTED", and others. Census tract data were a multi-year report for each census tract in the county (2000, 2004, and 2008). Each county was saved as a separate CSV file (COUNTY\textunderscore ABREV\textunderscore HUD.CSV).  \\
+2. LIHTC Data downloaded and aggregated from HUD website for each county (2000-2008) (The Low-Income Housing Tax Credit Affordable housing data.csv) LIHTC data are spatially located by address. Primary data attributes included a census tract "HUD ID Number", "Year", "Project Name", "Project Address", "Total Low-Income Units", "Total Number of Units", and others.
+Data files were modified for GIS processing (attribute labels cleaned up, shortned, characters removed, etc.) and added to a GIS.\\
+LIHTC data were geocoded using the "ArcGIS World Geocoding Service". A total of 238 nationwide LIHTC addresses were geocoded. Except for two locations, 236 addresses were positively matched. A separate analysis was performed on the two other locations that were ties. The locations were verified and a final shapefile was created. Using the Select by Attribute tool in ArcGIS, each county was exported as a separate shapefile (County\textunderscore Tax\textunderscore Credit.shp) from the naitonwide data set.\\
+
+County Census Tracts:\\
+County census tract data were downloaded from the IPUMS/NHGIS (IPUMS.org) for each county from the 2000 Census (see folder "nghis0045\textunderscore csv"). A data merge was performed in R using the spatial package (sp:::merge) between Section-8 CSV file and the Census Tract Shapefile for each county to generate a aggregated working file using a common census tract code as unique identifier ("GISJoin"). The resulting file in R that was filtered for the maximum available year that was 2008 for each county (Figure 1).\\
+
+
+HUD-Aggregated Tables:\\
+Section-8 and LIHTC were aggregated into a common spatial data set. The geocoded LIHTC county shapefile was imported into R and duplicate check was run to remove potential replicate LIHTC HUD IDs. Data were aggregated to the final observed year for each county, unlike Section-8, LIHTC data were summed across time to reflect the final year of available LIHTC units for each county. Section-8 and LIHTC were combined using a spatial join (sf:::st\textunderscore join) in R. The resulting spatial file realized census tract data with a total number of Section-8 housing units and multiple observations of LIHTC units per census tract. Thus, a final data set needed to collapse reported LIHTC into a single observation for each census tract. Further processing generated "clean" unique Section-8 and LIHTC summed by county census tract (Figure 2 and 3, repspectively). \\
 
 The data processing by county can be found in the path below.\\ 
 C:\textbackslash Users\textbackslash whitedl\textbackslash Documents\textbackslash R\textunderscore Code\textbackslash HUD\textunderscore Project\textunderscore Code\textbackslash CNTYNAME\textunderscore Public\textunderscore Housing\textunderscore CE.R\\
 
-Table 1 shows the coefficient estimates and related information that result from fitting a logistic regression to predict the probability of a CE located in a census tract based on the predictors Section 8 and Tax Credit housing counts in the corresponding census tracts. A positive coefficent will indicate that an increase in public housing is associated with an increase in the probability of a CE in a given Census Tract. A negative coefficent will imply that increased numbers of public housing units are associated with a decreased probability of a CE in a census tract. A highly significant negative effect is observed for Section 8 housing (P$<$.01) while a positive significant effect (P$<$.05) is observed for Tax Credit housing.\\
 
-Table 2 reports a NULL model deviance of 1093. A residual deviance of 1032 is observed.\\ 
+Results\\
+Descriptive Statistics:\\
+Total census tracts per county are presented in Figure 1. With the exception of SAC, all counties had fewer than 100 census tracts. Douglas county had the group minimum of 8. Sacramento had a group maximum of 279. Explanatory variables had high zero counts with respect to prescence per census tract (Figure 4 and 5). Both groups show a large number of zeros, but LIHTC units were generally found in fewer census tracts. Section 8 units were more abundant than LIHTC units (Figures 6 and 7). However, LIHTC appear to have a higher density in census tracts (Figure 8). Sacramento had the largest total number of Section 8 and LIHTC units. Douglas county had the fewest Section 8 units and zero LIHTC units.\\  
 
-A McFadden statistic is reported in table 3. The McFadden statisitic is complementary to a linear regression R2 value. A value of 0.068 indicates a relatively poor model fit. Although not as severe if it were an OLS R2 value.\\  
 
-Observations: 1. Many zeros are present in the Tax Credit housing. Originally, these were coded as NA, but that was an error. 2. I examined other model derivatives such as each predictor alone and an interaction effect. Those other models were even less compelling. 3. Overall, I do not find this to be a strong model. But my limited experience with logistic/categorical modeling could be an issue. 
+Model:\\
+A poisson logistic regression was performed on an all county data set to test the probability of a CE located in census tract dependent upon HUD housing counts (Tables 1-4). Table 5 presents the results of a zero-inflation model, however, an overdispersion test indicates that overdispersion was not present in the GLM-Poisson model (Table 4), and geneally not an issue for the county models. Tables 6-36 show results of the logistic-poisson model for each individual county. ALB and DGL were included in the county global model, but were not run as discrete county models due to small sample sizes. \\
 
+Parameter coefficient estimates for the global model (all counties) (CE presence/abscence = LIHTC + Sec 8) were significant (Table 1). A positive coefficent will indicate that an increase in public housing is associated with an increase in the probability of a CE in a given Census Tract. A negative coefficent will imply that increased numbers of public housing units are associated with a decreased probability of a CE in a census tract. Section 8 units had a signficant negative effect (-0.007)(P$<$.01) and LIHTC units had a signficant positive effect (0.002)(P$<$.05). A significant negative constant was reported (-0.738)(P$<$.01). Overdispersion was not indicted (Table 4).\\
+
+Sacramento and York had significant coefficient estimates for Section 8 and LIHTC units. For Sacramento, Section 8 units had a signficant negative effect (-0.016)(P$<$.05) and LIHTC units had a signficant postitive effect (0.003)(P$<$.01). A significant negative constant was reported (-1.970)(P$<$.01) (Table 30). Overdispersion was not indicted (Table 33). For York county,  Section 8 units had a signficant negative effect (-0.016)(P$<$.05) and LIHTC units had a signficant postitive effect (0.010)(P$<$.1) (Table 42). A significant negative constant was reported (-0.401)(P$<$.1). Overdispersion was not indicted (Table 44). For all other counties parameter coefficients were found to not be significant.
 
 \pagebreak
 \newpage
 \FloatBarrier
+
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
@@ -108,9 +129,33 @@ Observations: 1. Many zeros are present in the Tax Credit housing. Originally, t
 
 \end{knitrout}
 
+\pagebreak
+\newpage
+\FloatBarrier
+
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\includegraphics[width=\maxwidth]{figure/Hist_All_Sec_8_Counties_Tract-1} \caption[Section 8 Units per Census Tract]{Section 8 Units per Census Tract}\label{fig:Hist_All_Sec_8_Counties_Tract}
+\includegraphics[width=1.1\linewidth]{C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/bldsec8} \caption[Section 8 Vouchers by Census Tract in Boulder, CO with CE Overlay]{Section 8 Vouchers by Census Tract in Boulder, CO with CE Overlay}\label{fig:Example_County_Census_Sec8}
+\end{figure}
+
+
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+\includegraphics[width=1.1\linewidth]{C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/bldlihtc} \caption[LIHTC by Census Tract in Boulder, CO with CE Overlay]{LIHTC by Census Tract in Boulder, CO with CE Overlay}\label{fig:Example_County_Census_LITHC}
+\end{figure}
+
+
+\end{knitrout}
+ 
+\pagebreak
+\newpage
+\FloatBarrier 
+ 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+\includegraphics[width=0.9\linewidth]{figure/Hist_All_Sec_8_Counties_Tract-1} \caption[Histogram of Section 8 Units]{Histogram of Section 8 Units}\label{fig:Hist_All_Sec_8_Counties_Tract}
 \end{figure}
 
 
@@ -119,16 +164,7 @@ Observations: 1. Many zeros are present in the Tax Credit housing. Originally, t
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\includegraphics[width=\maxwidth]{figure/Hist_All_LIHTC_Counties_Tract-1} \caption[LIHTC Units per Census Tract]{LIHTC Units per Census Tract}\label{fig:Hist_All_LIHTC_Counties_Tract}
-\end{figure}
-
-
-\end{knitrout}
-
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\includegraphics[width=\maxwidth]{figure/BoxPlot_All_Units-1} \caption[Housing Units Reported by Census Tract]{Housing Units Reported by Census Tract}\label{fig:BoxPlot_All_Units}
+\includegraphics[width=\maxwidth]{figure/Hist_All_LIHTC_Counties_Tract-1} \caption[Histogram of LIHTC Units]{Histogram of LIHTC Units}\label{fig:Hist_All_LIHTC_Counties_Tract}
 \end{figure}
 
 
@@ -146,15 +182,7 @@ Observations: 1. Many zeros are present in the Tax Credit housing. Originally, t
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\includegraphics[width=\maxwidth]{figure/MultiPlot_Tax_Units_Counts-1} \caption[Tax Credit Units Reported by Census Tract]{Tax Credit Units Reported by Census Tract}\label{fig:MultiPlot_Tax_Units_Counts}
-\end{figure}
-
-
-\end{knitrout}
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\includegraphics[width=\maxwidth]{figure/MultiPlot_All_Units_Counts_stacked-1} \caption[Housing Units Reported by Census Tract]{Housing Units Reported by Census Tract}\label{fig:MultiPlot_All_Units_Counts_stacked}
+\includegraphics[width=\maxwidth]{figure/MultiPlot_Tax_Units_Counts-1} \caption[LIHTC Units Reported by Census Tract]{LIHTC Units Reported by Census Tract}\label{fig:MultiPlot_Tax_Units_Counts}
 \end{figure}
 
 
@@ -169,13 +197,24 @@ Observations: 1. Many zeros are present in the Tax Credit housing. Originally, t
 
 \end{knitrout}
 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+\includegraphics[width=\maxwidth]{figure/BoxPlot_All_Units-1} \caption[Housing Units Reported by Census Tract]{Housing Units Reported by Census Tract}\label{fig:BoxPlot_All_Units}
+\end{figure}
+
+
+\end{knitrout}
+
 \pagebreak
 \newpage
 \FloatBarrier
 
 
+
+
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:30 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:11 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{All Counties: Logistic Regression Results (GLM, Poisson) : HUD Housing} 
@@ -209,7 +248,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{1,195.404} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:30 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:12 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{All Counties: Analysis of Deviance} 
@@ -231,7 +270,7 @@ Pr(\textgreater Chi) & 2 & 0.019 & 0.027 & 0.000 & 0.009 & 0.028 & 0.038 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:30 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:12 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{All Counties: McFadden Statistic:similar to R2} 
@@ -249,7 +288,7 @@ Pr(\textgreater Chi) & 2 & 0.019 & 0.027 & 0.000 & 0.009 & 0.028 & 0.038 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:32 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:13 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{Overdisperson Test} 
@@ -273,7 +312,7 @@ Pr(\textgreater Chi) & 2 & 0.019 & 0.027 & 0.000 & 0.009 & 0.028 & 0.038 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:32 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{All Counties: Logistic Regression Results, Zero Inflation Model (Poisson Distribution): HUD Housing} 
@@ -310,8 +349,9 @@ Log Likelihood & \multicolumn{1}{c}{-592.625} \\
 \FloatBarrier
 
 
+
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{BLD Regression Results: HUD Housing} 
@@ -345,7 +385,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{123.318} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{BLD: Analysis of Deviance} 
@@ -367,7 +407,7 @@ Pr(\textgreater Chi) & 2 & 0.359 & 0.071 & 0.309 & 0.334 & 0.384 & 0.409 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{BLD: McFadden Statistic:similar to R2} 
@@ -385,7 +425,7 @@ Pr(\textgreater Chi) & 2 & 0.359 & 0.071 & 0.309 & 0.334 & 0.384 & 0.409 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{BLD Overdisperson Test} 
@@ -402,8 +442,9 @@ Pr(\textgreater Chi) & 2 & 0.359 & 0.071 & 0.309 & 0.334 & 0.384 & 0.409 \\
 
 
 
+
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{CHS Regression Results: HUD Housing} 
@@ -437,7 +478,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{97.780} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{CHS: Analysis of Deviance} 
@@ -459,7 +500,7 @@ Pr(\textgreater Chi) & 2 & 0.346 & 0.457 & 0.023 & 0.185 & 0.508 & 0.669 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{CHS: McFadden Statistic:similar to R2} 
@@ -477,10 +518,10 @@ Pr(\textgreater Chi) & 2 & 0.346 & 0.457 & 0.023 & 0.185 & 0.508 & 0.669 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
-  \caption{BLD Overdisperson Test} 
+  \caption{CHS Overdisperson Test} 
   \label{} 
 \begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
 \\[-1.8ex]\hline 
@@ -495,7 +536,7 @@ Pr(\textgreater Chi) & 2 & 0.346 & 0.457 & 0.023 & 0.185 & 0.508 & 0.669 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{GVL Regression Results: HUD Housing} 
@@ -507,19 +548,19 @@ Pr(\textgreater Chi) & 2 & 0.346 & 0.457 & 0.023 & 0.185 & 0.508 & 0.669 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & -0.006 \\ 
-  & (0.004) \\ 
+ Sec\_8\_Reported & -0.003 \\ 
+  & (0.003) \\ 
   & \\ 
- Tax\_Units\_reported & 0.005 \\ 
-  & (0.004) \\ 
+ Tax\_Units\_reported & 0.002 \\ 
+  & (0.002) \\ 
   & \\ 
- Constant & -0.143 \\ 
-  & (0.274) \\ 
+ Constant & -0.771^{***} \\ 
+  & (0.203) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{90} \\ 
-Log Likelihood & \multicolumn{1}{c}{-59.773} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{125.546} \\ 
+Log Likelihood & \multicolumn{1}{c}{-69.907} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{145.814} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -529,7 +570,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{125.546} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:14 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{GVL: Analysis of Deviance} 
@@ -540,10 +581,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{125.546} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 1.517 & 0.530 & 1.143 & 1.330 & 1.704 & 1.892 \\ 
+Deviance & 2 & 0.858 & 0.237 & 0.690 & 0.774 & 0.941 & 1.025 \\ 
 Resid. Df & 3 & 88.000 & 1.000 & 87 & 87.5 & 88.5 & 89 \\ 
-Resid. Dev & 3 & 121.188 & 1.532 & 119.546 & 120.491 & 122.009 & 122.580 \\ 
-Pr(\textgreater Chi) & 2 & 0.227 & 0.082 & 0.169 & 0.198 & 0.256 & 0.285 \\ 
+Resid. Dev & 3 & 64.727 & 0.863 & 63.814 & 64.326 & 65.184 & 65.529 \\ 
+Pr(\textgreater Chi) & 2 & 0.359 & 0.067 & 0.311 & 0.335 & 0.382 & 0.406 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -551,7 +592,7 @@ Pr(\textgreater Chi) & 2 & 0.227 & 0.082 & 0.169 & 0.198 & 0.256 & 0.285 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{GVL: McFadden Statistic:similar to R2} 
@@ -561,7 +602,7 @@ Pr(\textgreater Chi) & 2 & 0.227 & 0.082 & 0.169 & 0.198 & 0.256 & 0.285 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--59.773 & -61.290 & 3.034 & 0.025 & 0.033 & 0.045 \\ 
+-69.907 & -70.764 & 1.715 & 0.012 & 0.019 & 0.024 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -569,7 +610,27 @@ Pr(\textgreater Chi) & 2 & 0.227 & 0.082 & 0.169 & 0.198 & 0.256 & 0.285 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{GVL Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -4.091 & 1.000 & -0.422 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{GVL\_model1} \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{LDN Regression Results: HUD Housing} 
@@ -581,19 +642,19 @@ Pr(\textgreater Chi) & 2 & 0.227 & 0.082 & 0.169 & 0.198 & 0.256 & 0.285 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & 0.003 \\ 
-  & (0.014) \\ 
+ Sec\_8\_Reported & 0.001 \\ 
+  & (0.006) \\ 
   & \\ 
- Tax\_Units\_reported & 0.007 \\ 
-  & (0.008) \\ 
+ Tax\_Units\_reported & 0.001 \\ 
+  & (0.002) \\ 
   & \\ 
- Constant & 0.463 \\ 
-  & (0.455) \\ 
+ Constant & -0.469^{*} \\ 
+  & (0.266) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{32} \\ 
-Log Likelihood & \multicolumn{1}{c}{-18.791} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{43.583} \\ 
+Log Likelihood & \multicolumn{1}{c}{-30.002} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{66.004} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -603,7 +664,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{43.583} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{LDN: Analysis of Deviance} 
@@ -614,10 +675,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{43.583} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 1.083 & 0.126 & 0.994 & 1.039 & 1.128 & 1.172 \\ 
+Deviance & 2 & 0.241 & 0.083 & 0.182 & 0.212 & 0.271 & 0.300 \\ 
 Resid. Df & 3 & 30.000 & 1.000 & 29 & 29.5 & 30.5 & 31 \\ 
-Resid. Dev & 3 & 38.636 & 1.085 & 37.583 & 38.080 & 39.163 & 39.750 \\ 
-Pr(\textgreater Chi) & 2 & 0.299 & 0.028 & 0.279 & 0.289 & 0.309 & 0.319 \\ 
+Resid. Dev & 3 & 16.225 & 0.244 & 16.004 & 16.095 & 16.336 & 16.487 \\ 
+Pr(\textgreater Chi) & 2 & 0.626 & 0.061 & 0.584 & 0.605 & 0.648 & 0.669 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -625,7 +686,7 @@ Pr(\textgreater Chi) & 2 & 0.299 & 0.028 & 0.279 & 0.289 & 0.309 & 0.319 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{LDN: McFadden Statistic:similar to R2} 
@@ -635,7 +696,25 @@ Pr(\textgreater Chi) & 2 & 0.299 & 0.028 & 0.279 & 0.289 & 0.309 & 0.319 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--18.791 & -19.875 & 2.167 & 0.055 & 0.065 & 0.092 \\ 
+-30.002 & -30.243 & 0.483 & 0.008 & 0.015 & 0.018 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{LDN Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -4.213 & 1.000 & -0.687 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{LDN\_model1} \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -644,7 +723,7 @@ Pr(\textgreater Chi) & 2 & 0.299 & 0.028 & 0.279 & 0.289 & 0.309 & 0.319 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{LEB Regression Results: HUD Housing} 
@@ -656,19 +735,19 @@ Pr(\textgreater Chi) & 2 & 0.299 & 0.028 & 0.279 & 0.289 & 0.309 & 0.319 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & -0.090^{**} \\ 
-  & (0.038) \\ 
+ Sec\_8\_Reported & -0.032 \\ 
+  & (0.020) \\ 
   & \\ 
- Tax\_Units\_reported & 0.137 \\ 
-  & (0.285) \\ 
+ Tax\_Units\_reported & 0.017 \\ 
+  & (0.040) \\ 
   & \\ 
- Constant & 3.130^{***} \\ 
-  & (1.089) \\ 
+ Constant & 0.004 \\ 
+  & (0.241) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{29} \\ 
-Log Likelihood & \multicolumn{1}{c}{-5.563} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{17.126} \\ 
+Log Likelihood & \multicolumn{1}{c}{-22.141} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{50.283} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -676,12 +755,9 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{17.126} \\
 \end{table} 
 
 
-\begin{kframe}
 
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred}}\end{kframe}
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:33 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{LEB: Analysis of Deviance} 
@@ -692,10 +768,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{17.126} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 12.399 & 17.160 & 0.265 & 6.332 & 18.466 & 24.533 \\ 
+Deviance & 2 & 5.290 & 7.260 & 0.156 & 2.723 & 7.857 & 10.424 \\ 
 Resid. Df & 3 & 27.000 & 1.000 & 26 & 26.5 & 27.5 & 28 \\ 
-Resid. Dev & 3 & 19.480 & 14.241 & 11.126 & 11.258 & 23.657 & 35.924 \\ 
-Pr(\textgreater Chi) & 2 & 0.303 & 0.429 & 0.00000 & 0.152 & 0.455 & 0.607 \\ 
+Resid. Dev & 3 & 7.861 & 6.064 & 4.283 & 4.361 & 9.651 & 14.863 \\ 
+Pr(\textgreater Chi) & 2 & 0.347 & 0.489 & 0.001 & 0.174 & 0.520 & 0.693 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -703,7 +779,7 @@ Pr(\textgreater Chi) & 2 & 0.303 & 0.429 & 0.00000 & 0.152 & 0.455 & 0.607 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{LEB: McFadden Statistic:similar to R2} 
@@ -713,7 +789,25 @@ Pr(\textgreater Chi) & 2 & 0.303 & 0.429 & 0.00000 & 0.152 & 0.455 & 0.607 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--5.563 & -17.962 & 24.798 & 0.690 & 0.575 & 0.809 \\ 
+-22.141 & -27.431 & 10.580 & 0.193 & 0.306 & 0.360 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{LEB Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -6.024 & 1 & -0.690 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{LEB\_model1} \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -722,7 +816,7 @@ Pr(\textgreater Chi) & 2 & 0.303 & 0.429 & 0.00000 & 0.152 & 0.455 & 0.607 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{MES Regression Results: HUD Housing} 
@@ -734,19 +828,19 @@ Pr(\textgreater Chi) & 2 & 0.303 & 0.429 & 0.00000 & 0.152 & 0.455 & 0.607 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & -0.013 \\ 
-  & (0.010) \\ 
+ Sec\_8\_Reported & -0.009 \\ 
+  & (0.009) \\ 
   & \\ 
- Tax\_Units\_reported & 0.004 \\ 
-  & (0.016) \\ 
+ Tax\_Units\_reported & 0.003 \\ 
+  & (0.014) \\ 
   & \\ 
- Constant & 0.018 \\ 
-  & (0.513) \\ 
+ Constant & -0.657^{*} \\ 
+  & (0.373) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{28} \\ 
-Log Likelihood & \multicolumn{1}{c}{-16.506} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{39.012} \\ 
+Log Likelihood & \multicolumn{1}{c}{-19.084} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{44.168} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -756,7 +850,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{39.012} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{MES: Analysis of Deviance} 
@@ -767,10 +861,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{39.012} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 1.743 & 2.357 & 0.077 & 0.910 & 2.576 & 3.409 \\ 
+Deviance & 2 & 1.212 & 1.647 & 0.047 & 0.630 & 1.795 & 2.377 \\ 
 Resid. Df & 3 & 26.000 & 1.000 & 25 & 25.5 & 26.5 & 27 \\ 
-Resid. Dev & 3 & 34.200 & 1.991 & 33.012 & 33.050 & 34.794 & 36.498 \\ 
-Pr(\textgreater Chi) & 2 & 0.423 & 0.507 & 0.065 & 0.244 & 0.602 & 0.782 \\ 
+Resid. Dev & 3 & 18.992 & 1.386 & 18.168 & 18.192 & 19.404 & 20.592 \\ 
+Pr(\textgreater Chi) & 2 & 0.475 & 0.498 & 0.123 & 0.299 & 0.652 & 0.828 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -778,7 +872,7 @@ Pr(\textgreater Chi) & 2 & 0.423 & 0.507 & 0.065 & 0.244 & 0.602 & 0.782 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{MES: McFadden Statistic:similar to R2} 
@@ -788,7 +882,25 @@ Pr(\textgreater Chi) & 2 & 0.423 & 0.507 & 0.065 & 0.244 & 0.602 & 0.782 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--16.506 & -18.249 & 3.486 & 0.096 & 0.117 & 0.161 \\ 
+-19.084 & -20.296 & 2.424 & 0.060 & 0.083 & 0.108 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{MES Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -2.030 & 0.979 & -0.357 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{MES\_model1} \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -797,7 +909,7 @@ Pr(\textgreater Chi) & 2 & 0.423 & 0.507 & 0.065 & 0.244 & 0.602 & 0.782 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{SAC Regression Results: HUD Housing} 
@@ -809,19 +921,19 @@ Pr(\textgreater Chi) & 2 & 0.423 & 0.507 & 0.065 & 0.244 & 0.602 & 0.782 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & -0.017^{**} \\ 
+ Sec\_8\_Reported & -0.016^{**} \\ 
   & (0.007) \\ 
   & \\ 
- Tax\_Units\_reported & 0.004^{**} \\ 
-  & (0.002) \\ 
+ Tax\_Units\_reported & 0.003^{***} \\ 
+  & (0.001) \\ 
   & \\ 
- Constant & -1.834^{***} \\ 
-  & (0.289) \\ 
+ Constant & -1.970^{***} \\ 
+  & (0.269) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{279} \\ 
-Log Likelihood & \multicolumn{1}{c}{-73.232} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{152.464} \\ 
+Log Likelihood & \multicolumn{1}{c}{-74.861} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{155.722} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -831,7 +943,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{152.464} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{SAC: Analysis of Deviance} 
@@ -842,10 +954,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{152.464} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 6.195 & 0.609 & 5.764 & 5.979 & 6.410 & 6.625 \\ 
+Deviance & 2 & 5.541 & 0.895 & 4.908 & 5.224 & 5.857 & 6.173 \\ 
 Resid. Df & 3 & 277.000 & 1.000 & 276 & 276.5 & 277.5 & 278 \\ 
-Resid. Dev & 3 & 152.515 & 6.199 & 146.464 & 149.346 & 155.540 & 158.853 \\ 
-Pr(\textgreater Chi) & 2 & 0.013 & 0.004 & 0.010 & 0.012 & 0.015 & 0.016 \\ 
+Resid. Dev & 3 & 109.051 & 5.553 & 103.722 & 106.176 & 111.716 & 114.803 \\ 
+Pr(\textgreater Chi) & 2 & 0.020 & 0.010 & 0.013 & 0.016 & 0.023 & 0.027 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -853,7 +965,7 @@ Pr(\textgreater Chi) & 2 & 0.013 & 0.004 & 0.010 & 0.012 & 0.015 & 0.016 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{SAC: McFadden Statistic:similar to R2} 
@@ -863,7 +975,25 @@ Pr(\textgreater Chi) & 2 & 0.013 & 0.004 & 0.010 & 0.012 & 0.015 & 0.016 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--73.232 & -79.426 & 12.389 & 0.078 & 0.043 & 0.100 \\ 
+-74.861 & -80.402 & 11.081 & 0.069 & 0.039 & 0.089 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:15 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{SAC Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -2.778 & 0.997 & -0.269 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{CHS\_model1} \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -872,7 +1002,7 @@ Pr(\textgreater Chi) & 2 & 0.013 & 0.004 & 0.010 & 0.012 & 0.015 & 0.016 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{SON Regression Results: HUD Housing} 
@@ -884,19 +1014,19 @@ Pr(\textgreater Chi) & 2 & 0.013 & 0.004 & 0.010 & 0.012 & 0.015 & 0.016 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & -0.007^{*} \\ 
-  & (0.004) \\ 
+ Sec\_8\_Reported & -0.004 \\ 
+  & (0.003) \\ 
   & \\ 
  Tax\_Units\_reported & -0.001 \\ 
-  & (0.004) \\ 
+  & (0.003) \\ 
   & \\ 
- Constant & 0.694^{**} \\ 
-  & (0.324) \\ 
+ Constant & -0.375^{*} \\ 
+  & (0.201) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{86} \\ 
-Log Likelihood & \multicolumn{1}{c}{-56.690} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{119.379} \\ 
+Log Likelihood & \multicolumn{1}{c}{-74.130} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{154.260} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -906,7 +1036,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{119.379} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{SON: Analysis of Deviance} 
@@ -917,10 +1047,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{119.379} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 2.548 & 3.524 & 0.056 & 1.302 & 3.794 & 5.040 \\ 
+Deviance & 2 & 1.267 & 1.748 & 0.031 & 0.649 & 1.885 & 2.504 \\ 
 Resid. Df & 3 & 84.000 & 1.000 & 83 & 83.5 & 84.5 & 85 \\ 
-Resid. Dev & 3 & 115.097 & 2.926 & 113.379 & 113.408 & 115.956 & 118.476 \\ 
-Pr(\textgreater Chi) & 2 & 0.419 & 0.557 & 0.025 & 0.222 & 0.616 & 0.812 \\ 
+Resid. Dev & 3 & 55.115 & 1.454 & 54.260 & 54.276 & 55.543 & 56.795 \\ 
+Pr(\textgreater Chi) & 2 & 0.487 & 0.528 & 0.114 & 0.300 & 0.674 & 0.860 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -928,7 +1058,7 @@ Pr(\textgreater Chi) & 2 & 0.419 & 0.557 & 0.025 & 0.222 & 0.616 & 0.812 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{SON: McFadden Statistic:similar to R2} 
@@ -938,7 +1068,25 @@ Pr(\textgreater Chi) & 2 & 0.419 & 0.557 & 0.025 & 0.222 & 0.616 & 0.812 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--56.690 & -59.238 & 5.097 & 0.043 & 0.058 & 0.077 \\ 
+-74.130 & -75.397 & 2.535 & 0.017 & 0.029 & 0.035 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{SON Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -5.168 & 1.000 & -0.547 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{SON\_model1} \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -947,7 +1095,7 @@ Pr(\textgreater Chi) & 2 & 0.419 & 0.557 & 0.025 & 0.222 & 0.616 & 0.812 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{WAS Regression Results: HUD Housing} 
@@ -959,19 +1107,19 @@ Pr(\textgreater Chi) & 2 & 0.419 & 0.557 & 0.025 & 0.222 & 0.616 & 0.812 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & -0.006 \\ 
+ Sec\_8\_Reported & -0.003 \\ 
+  & (0.005) \\ 
+  & \\ 
+ Tax\_Units\_reported & -0.00005 \\ 
   & (0.007) \\ 
   & \\ 
- Tax\_Units\_reported & -0.0001 \\ 
-  & (0.009) \\ 
-  & \\ 
- Constant & 0.358 \\ 
-  & (0.342) \\ 
+ Constant & -0.524^{**} \\ 
+  & (0.223) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{50} \\ 
-Log Likelihood & \multicolumn{1}{c}{-33.927} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{73.854} \\ 
+Log Likelihood & \multicolumn{1}{c}{-43.350} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{92.700} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -981,7 +1129,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{73.854} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{WAS: Analysis of Deviance} 
@@ -992,10 +1140,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{73.854} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 0.570 & 0.806 & 0.0001 & 0.285 & 0.855 & 1.140 \\ 
+Deviance & 2 & 0.287 & 0.406 & 0.0001 & 0.143 & 0.430 & 0.574 \\ 
 Resid. Df & 3 & 48.000 & 1.000 & 47 & 47.5 & 48.5 & 49 \\ 
-Resid. Dev & 3 & 68.234 & 0.658 & 67.854 & 67.854 & 68.424 & 68.994 \\ 
-Pr(\textgreater Chi) & 2 & 0.639 & 0.500 & 0.286 & 0.462 & 0.816 & 0.992 \\ 
+Resid. Dev & 3 & 32.892 & 0.331 & 32.700 & 32.700 & 32.987 & 33.274 \\ 
+Pr(\textgreater Chi) & 2 & 0.722 & 0.386 & 0.449 & 0.585 & 0.858 & 0.994 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -1003,7 +1151,7 @@ Pr(\textgreater Chi) & 2 & 0.639 & 0.500 & 0.286 & 0.462 & 0.816 & 0.992 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{WAS: McFadden Statistic:similar to R2} 
@@ -1013,7 +1161,25 @@ Pr(\textgreater Chi) & 2 & 0.639 & 0.500 & 0.286 & 0.462 & 0.816 & 0.992 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--33.927 & -34.497 & 1.140 & 0.017 & 0.023 & 0.030 \\ 
+-43.350 & -43.637 & 0.574 & 0.007 & 0.011 & 0.014 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{WAS Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -3.829 & 1.000 & -0.540 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{WAS\_model1} \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -1022,7 +1188,7 @@ Pr(\textgreater Chi) & 2 & 0.639 & 0.500 & 0.286 & 0.462 & 0.816 & 0.992 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{YRK Regression Results: HUD Housing} 
@@ -1034,19 +1200,19 @@ Pr(\textgreater Chi) & 2 & 0.639 & 0.500 & 0.286 & 0.462 & 0.816 & 0.992 \\
 \cline{2-2} 
 \\[-1.8ex] & \multicolumn{1}{c}{CE\_Present} \\ 
 \hline \\[-1.8ex] 
- Sec\_8\_Reported & -0.033^{***} \\ 
-  & (0.011) \\ 
+ Sec\_8\_Reported & -0.016^{**} \\ 
+  & (0.007) \\ 
   & \\ 
- Tax\_Units\_reported & 0.035^{**} \\ 
-  & (0.016) \\ 
+ Tax\_Units\_reported & 0.010^{*} \\ 
+  & (0.006) \\ 
   & \\ 
- Constant & 0.726^{**} \\ 
-  & (0.304) \\ 
+ Constant & -0.401^{**} \\ 
+  & (0.180) \\ 
   & \\ 
 \hline \\[-1.8ex] 
 Observations & \multicolumn{1}{c}{82} \\ 
-Log Likelihood & \multicolumn{1}{c}{-45.494} \\ 
-Akaike Inf. Crit. & \multicolumn{1}{c}{96.988} \\ 
+Log Likelihood & \multicolumn{1}{c}{-64.841} \\ 
+Akaike Inf. Crit. & \multicolumn{1}{c}{135.683} \\ 
 \hline 
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
@@ -1056,7 +1222,7 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{96.988} \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:34 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{YRK: Analysis of Deviance} 
@@ -1067,10 +1233,10 @@ Akaike Inf. Crit. & \multicolumn{1}{c}{96.988} \\
 Statistic & \multicolumn{1}{c}{N} & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{St. Dev.} & \multicolumn{1}{c}{Min} & \multicolumn{1}{c}{Pctl(25)} & \multicolumn{1}{c}{Pctl(75)} & \multicolumn{1}{c}{Max} \\ 
 \hline \\[-1.8ex] 
 Df & 2 & 1.000 & 0.000 & 1.000 & 1.000 & 1.000 & 1.000 \\ 
-Deviance & 2 & 11.246 & 6.444 & 6.690 & 8.968 & 13.525 & 15.803 \\ 
+Deviance & 2 & 5.916 & 4.893 & 2.456 & 4.186 & 7.646 & 9.376 \\ 
 Resid. Df & 3 & 80.000 & 1.000 & 79 & 79.5 & 80.5 & 81 \\ 
-Resid. Dev & 3 & 100.716 & 11.550 & 90.988 & 94.333 & 105.580 & 113.481 \\ 
-Pr(\textgreater Chi) & 2 & 0.005 & 0.007 & 0.0001 & 0.002 & 0.007 & 0.010 \\ 
+Resid. Dev & 3 & 48.446 & 6.244 & 43.683 & 44.911 & 50.827 & 55.515 \\ 
+Pr(\textgreater Chi) & 2 & 0.060 & 0.081 & 0.002 & 0.031 & 0.088 & 0.117 \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 
@@ -1078,7 +1244,7 @@ Pr(\textgreater Chi) & 2 & 0.005 & 0.007 & 0.0001 & 0.002 & 0.007 & 0.010 \\
 
 
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
-% Date and time: Wed, Apr 15, 2020 - 10:12:35 AM
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
 % Requires LaTeX packages: dcolumn 
 \begin{table}[!htbp] \centering 
   \caption{YRK: McFadden Statistic:similar to R2} 
@@ -1088,7 +1254,25 @@ Pr(\textgreater Chi) & 2 & 0.005 & 0.007 & 0.0001 & 0.002 & 0.007 & 0.010 \\
 \hline \\[-1.8ex] 
 \multicolumn{1}{c}{llh} & \multicolumn{1}{c}{llhNull} & \multicolumn{1}{c}{G2} & \multicolumn{1}{c}{McFadden} & \multicolumn{1}{c}{r2ML} & \multicolumn{1}{c}{r2CU} \\ 
 \hline \\[-1.8ex] 
--45.494 & -56.740 & 22.493 & 0.198 & 0.240 & 0.320 \\ 
+-64.841 & -70.757 & 11.832 & 0.084 & 0.134 & 0.163 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Thu, Apr 23, 2020 - 4:50:16 PM
+% Requires LaTeX packages: dcolumn 
+\begin{table}[!htbp] \centering 
+  \caption{YRK Overdisperson Test} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} D{.}{.}{-3} } 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{statistic} & \multicolumn{1}{c}{p.value} & \multicolumn{1}{c}{estimate} & \multicolumn{1}{c}{null.value} & \multicolumn{1}{c}{alternative} & \multicolumn{1}{c}{method} & \multicolumn{1}{c}{data.name} \\ 
+\hline \\[-1.8ex] 
+\multicolumn{1}{c}{z} & -2.778 & 0.997 & -0.269 & 0 & \multicolumn{1}{c}{greater} & \multicolumn{1}{c}{Overdispersion test} & \multicolumn{1}{c}{CHS\_model1} \\ 
 \hline \\[-1.8ex] 
 \end{tabular} 
 \end{table} 

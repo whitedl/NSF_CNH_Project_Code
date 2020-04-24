@@ -41,7 +41,7 @@ library(magrittr)
 <<data_prep, echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 # build a dataset of all data ---------------------------------------------
 # the county abbreviations
-cnty <- c("ALB","BLD","CHS","DGL","GVL","LDN","LEB","MES", "SAC", "SON","WAS","YRK")
+cnty <- c("ALB","BLD","CHS","DGL","GVL","LDN","LEB","MES","SAC","SON","WAS","YRK")
 
 df_list <- list()
 dir <- ("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/")
@@ -69,58 +69,89 @@ alldata_edit_melt <- melt(alldata_edit[,c('Sec_8_Reported', 'Tax_Units_reported'
 
 @
 
-Methods: A multistep data processing routine was performed for each county to integrate spatial and tabular data sets of CE presence/absence and public housing counts at a census tract level in each county. Data were aggregated to the final observed year for each county. Census tract data and HUD data date to 2000. HUD data include Section-8 vouchers and Low-Income Housing Tax Credit (LIHTC) unit counts in each census tract.The final tabular data set for each county is presented in this analysis. A logistic regression was performed on an all county data set to test the probability of a CE located in census tract dependent upon HUD housing counts (Tables 1-4). Tables 5-34 show results of the logistic regression for each individual county. ALB and DGL were not included in the anlaysis due small sample size. Results for LEB is of particular interest. \\ 
+Methods: A multi-step data processing routine was performed for each county to integrate spatial and tabular data sets. Census tract data were spatially joined with CEs, Section-8 voucher housing units, and Low-Income Housing Tax Credit (LIHTC) units. 
+\\
+
+Processing Steps:\\
+HUD Housing Data\\
+1. Section-8 Voucher Data downloaded and aggregated from HUD website for each county (2000-2008)(see Assisted\textunderscore Housing\textunderscore Data.csv)\\
+Section-8 Voucher data are spatially located by census tract. Primary data attributes included a census tract "CODE", "YEAR", "NUMBER\textunderscore REPORTED", and others. Census tract data were a multi-year report for each census tract in the county (2000, 2004, and 2008). Each county was saved as a separate CSV file (COUNTY\textunderscore ABREV\textunderscore HUD.CSV).  \\
+2. LIHTC Data downloaded and aggregated from HUD website for each county (2000-2008) (The Low-Income Housing Tax Credit Affordable housing data.csv) LIHTC data are spatially located by address. Primary data attributes included a census tract "HUD ID Number", "Year", "Project Name", "Project Address", "Total Low-Income Units", "Total Number of Units", and others.
+Data files were modified for GIS processing (attribute labels cleaned up, shortned, characters removed, etc.) and added to a GIS.\\
+LIHTC data were geocoded using the "ArcGIS World Geocoding Service". A total of 238 nationwide LIHTC addresses were geocoded. Except for two locations, 236 addresses were positively matched. A separate analysis was performed on the two other locations that were ties. The locations were verified and a final shapefile was created. Using the Select by Attribute tool in ArcGIS, each county was exported as a separate shapefile (County\textunderscore Tax\textunderscore Credit.shp) from the naitonwide data set.\\
+
+County Census Tracts:\\
+County census tract data were downloaded from the IPUMS/NHGIS (IPUMS.org) for each county from the 2000 Census (see folder "nghis0045\textunderscore csv"). A data merge was performed in R using the spatial package (sp:::merge) between Section-8 CSV file and the Census Tract Shapefile for each county to generate a aggregated working file using a common census tract code as unique identifier ("GISJoin"). The resulting file in R that was filtered for the maximum available year that was 2008 for each county (Figure 1).\\
+
+
+HUD-Aggregated Tables:\\
+Section-8 and LIHTC were aggregated into a common spatial data set. The geocoded LIHTC county shapefile was imported into R and duplicate check was run to remove potential replicate LIHTC HUD IDs. Data were aggregated to the final observed year for each county, unlike Section-8, LIHTC data were summed across time to reflect the final year of available LIHTC units for each county. Section-8 and LIHTC were combined using a spatial join (sf:::st\textunderscore join) in R. The resulting spatial file realized census tract data with a total number of Section-8 housing units and multiple observations of LIHTC units per census tract. Thus, a final data set needed to collapse reported LIHTC into a single observation for each census tract. Further processing generated "clean" unique Section-8 and LIHTC summed by county census tract (Figure 2 and 3, repspectively). \\
 
 The data processing by county can be found in the path below.\\ 
 C:\textbackslash Users\textbackslash whitedl\textbackslash Documents\textbackslash R\textunderscore Code\textbackslash HUD\textunderscore Project\textunderscore Code\textbackslash CNTYNAME\textunderscore Public\textunderscore Housing\textunderscore CE.R\\
 
-Table 1 shows the coefficient estimates and related information that result from fitting a logistic regression to predict the probability of a CE located in a census tract based on the predictors Section 8 and Tax Credit housing counts in the corresponding census tracts. A positive coefficent will indicate that an increase in public housing is associated with an increase in the probability of a CE in a given Census Tract. A negative coefficent will imply that increased numbers of public housing units are associated with a decreased probability of a CE in a census tract. A highly significant negative effect is observed for Section 8 housing (P$<$.01) while a positive significant effect (P$<$.05) is observed for Tax Credit housing.\\
 
-Table 2 reports a NULL model deviance of 1093. A residual deviance of 1032 is observed.\\ 
+Results\\
+Descriptive Statistics:\\
+Total census tracts per county are presented in Figure 1. With the exception of SAC, all counties had fewer than 100 census tracts. Douglas county had the group minimum of 8. Sacramento had a group maximum of 279. Explanatory variables had high zero counts with respect to prescence per census tract (Figure 4 and 5). Both groups show a large number of zeros, but LIHTC units were generally found in fewer census tracts. Section 8 units were more abundant than LIHTC units (Figures 6 and 7). However, LIHTC appear to have a higher density in census tracts (Figure 8). Sacramento had the largest total number of Section 8 and LIHTC units. Douglas county had the fewest Section 8 units and zero LIHTC units.\\  
 
-A McFadden statistic is reported in table 3. The McFadden statisitic is complementary to a linear regression R2 value. A value of 0.068 indicates a relatively poor model fit. Although not as severe if it were an OLS R2 value.\\  
 
-Observations: 1. Many zeros are present in the Tax Credit housing. Originally, these were coded as NA, but that was an error. 2. I examined other model derivatives such as each predictor alone and an interaction effect. Those other models were even less compelling. 3. Overall, I do not find this to be a strong model. But my limited experience with logistic/categorical modeling could be an issue. 
+Model:\\
+A poisson logistic regression was performed on an all county data set to test the probability of a CE located in census tract dependent upon HUD housing counts (Tables 1-4). Table 5 presents the results of a zero-inflation model, however, an overdispersion test indicates that overdispersion was not present in the GLM-Poisson model (Table 4), and geneally not an issue for the county models. Tables 6-36 show results of the logistic-poisson model for each individual county. ALB and DGL were included in the county global model, but were not run as discrete county models due to small sample sizes. \\
 
+Parameter coefficient estimates for the global model (all counties) (CE presence/abscence = LIHTC + Sec 8) were significant (Table 1). A positive coefficent will indicate that an increase in public housing is associated with an increase in the probability of a CE in a given Census Tract. A negative coefficent will imply that increased numbers of public housing units are associated with a decreased probability of a CE in a census tract. Section 8 units had a signficant negative effect (-0.007)(P$<$.01) and LIHTC units had a signficant positive effect (0.002)(P$<$.05). A significant negative constant was reported (-0.738)(P$<$.01). Overdispersion was not indicted (Table 4).\\
+
+Sacramento and York had significant coefficient estimates for Section 8 and LIHTC units. For Sacramento, Section 8 units had a signficant negative effect (-0.016)(P$<$.05) and LIHTC units had a signficant postitive effect (0.003)(P$<$.01). A significant negative constant was reported (-1.970)(P$<$.01) (Table 30). Overdispersion was not indicted (Table 33). For York county,  Section 8 units had a signficant negative effect (-0.016)(P$<$.05) and LIHTC units had a signficant postitive effect (0.010)(P$<$.1) (Table 42). A significant negative constant was reported (-0.401)(P$<$.1). Overdispersion was not indicted (Table 44). For all other counties parameter coefficients were found to not be significant.
 
 \pagebreak
 \newpage
 \FloatBarrier
 
+
 <<Bar_All_Counties_Tract, fig.cap='Total Census Tracts by County', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 
-ggplot(alldata_edit_melt, aes(x=County_ID)) +
-    geom_bar(stat="count", col="black", alpha = .5) + labs(title= "Total Census Tracts per County", x="County", y = "Total") +
+ggplot(alldata_edit, aes(x=County_ID)) +
+    geom_bar(stat="count", col="black", alpha = .5) + geom_text(stat="count", aes(label=..count.., vjust=1.3), col="white") + labs(title= "Total Census Tracts per County", x="County", y = "Total") +
     theme(plot.title = element_text(hjust = 0.5))
 
 ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Census_Tracts_per_County.pdf", width = 10, height = 8)
 @
 
-<<Hist_All_Sec_8_Counties_Tract, fig.cap='Section 8 Units per Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+\pagebreak
+\newpage
+\FloatBarrier
+
+<<Example_County_Census_Sec8, out.width='110%', fig.cap='Section 8 Vouchers by Census Tract in Boulder, CO with CE Overlay', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+knitr::include_graphics('C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/bldsec8.PNG')
+
+@
+
+<<Example_County_Census_LITHC, out.width='110%', fig.cap='LIHTC by Census Tract in Boulder, CO with CE Overlay', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+knitr::include_graphics('C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/bldlihtc.PNG')
+
+@
+ 
+\pagebreak
+\newpage
+\FloatBarrier 
+ 
+<<Hist_All_Sec_8_Counties_Tract, out.width='90%', fig.cap='Histogram of Section 8 Units', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 
 ggplot(alldata, aes(alldata$Sec_8_Reported)) + geom_histogram(col="black", fill="orange", alpha = .5) +
-  labs(title="Histogram for Section 8 Housing", x="Section 8 Units per Census Tract", y="Count") +
+  labs(title="Histogram for Section 8 Housing", x="Section 8 Units", y="Count") +
   theme(plot.title = element_text(hjust = 0.5))
 
 ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Section_8_Units_per_Census_Tract.pdf", width = 10, height = 8)
 @
 
 
-<<Hist_All_LIHTC_Counties_Tract, fig.cap='LIHTC Units per Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+<<Hist_All_LIHTC_Counties_Tract, fig.cap='Histogram of LIHTC Units', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 
 ggplot(alldata, aes(alldata$Tax_Units_reported)) + geom_histogram(col="black", fill="blue", alpha = .5) +
-  labs(title="Histogram for Low-Income Housing Units Tax Credit (LIHTC)", x="LIHTC per Census Tract", y="Count") +
+  labs(title="Histogram for Low-Income Housing Units Tax Credit (LIHTC)", x="LIHTC units", y="Count") +
   theme(plot.title = element_text(hjust = 0.5))
 
 ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/LIHTC_Units_per_Census_Tract.pdf", width = 10, height = 8)
-@
-
-
-<<BoxPlot_All_Units, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
-ggplot(alldata_edit_melt, aes(x = CE_Present, y = value, fill = variable)) + geom_boxplot() +
-facet_wrap(~ County_ID) + scale_fill_manual(values = c("orange", "blue")) + labs(title = "Housing Units Reported by Census Tract (note: zeros dropped)", x='', y='Counts') + theme(plot.title = element_text(hjust = 0.5), legend.position="bottom", legend.title = element_blank()) + scale_y_log10()
-
-ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Housing_Units_Reported_Census Tract.pdf", width = 10, height = 8)
 @
 
 
@@ -134,22 +165,13 @@ ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analy
 @
 
 
-<<MultiPlot_Tax_Units_Counts, fig.cap='Tax Credit Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+<<MultiPlot_Tax_Units_Counts, fig.cap='LIHTC Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
 ggplot(alldata_edit) + geom_bar(aes(x=CE_Present,y=Tax_Units_reported, fill=CE_Present), stat="identity", width = .5, show.legend = FALSE) + coord_flip() +
   scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
   labs(title = "Tax Credit Units Reported by Census Tract", x='', y='Counts') +
   theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ))
 
 ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Tax_Credit_Units_by_CNTY.pdf", width = 10, height = 8)
-@
-
-<<MultiPlot_All_Units_Counts_stacked, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
-ggplot(alldata_edit_melt) + geom_bar(aes(x=CE_Present,y=value, fill=variable), stat="identity", width = .5, show.legend = TRUE) + coord_flip() +
-  scale_fill_manual(values = c("orange", "blue")) + facet_wrap(~County_ID) + 
-  labs(title = "All HUD Housing Units Reported by Census Tract", x='', y='Counts') +
-  theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ), legend.position="bottom", legend.title = element_blank())
-
-ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Stacked_by_CNTY.pdf", width = 10, height = 8)
 @
 
 
@@ -166,12 +188,22 @@ ggplot(alldata_edit_melt_sum) + geom_bar(aes(x=CE_Present,y=value, fill=variable
   labs(title = "All HUD Housing Units Reported by Census Tract", x='', y='Counts') +
   theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_text(size=8, angle=-45, hjust=.15, vjust=.15 ), legend.position="bottom", legend.title = element_blank())
 
-ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Grouped_by_CNTY.pdf", width = 10, height = 8)
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/All_Units_Grouped_by_CNTY.pdf", width = 7, height = 7)
+@
+
+
+<<BoxPlot_All_Units, fig.cap='Housing Units Reported by Census Tract', echo=FALSE, results='latex', message=FALSE, warning=FALSE>>=
+ggplot(alldata_edit_melt, aes(x = CE_Present, y = value, fill = variable)) + geom_boxplot() +
+facet_wrap(~ County_ID) + scale_fill_manual(values = c("orange", "blue")) + labs(title = "Housing Units Reported by Census Tract (note: zeros dropped)", x='', y='Counts') + theme(plot.title = element_text(hjust = 0.5), legend.position="bottom", legend.title = element_blank()) + scale_y_log10()
+
+ggsave("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalFigures_Out/Housing_Units_Reported_Census Tract.pdf", width = 8, height = 10)
 @
 
 \pagebreak
 \newpage
 \FloatBarrier
+
+
 
 <<Logistic_Model1_8_LIHTC, results='asis', echo=FALSE, message=FALSE>>=
 #----------------------------------------------------------- Regression Model ------------------------------------------------------#
@@ -224,25 +256,26 @@ stargazer(model1_zero, title="All Counties: Logistic Regression Results, Zero In
 \newpage
 \FloatBarrier
 
-<<BLD_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
+
+<<BLD_Logistic_Model1, results='asis', echo=FALSE, message=FALSE, error=FALSE>>=
 
 BLD_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "BLD")
 
 stargazer(BLD_model1, title="BLD Regression Results: HUD Housing", align=TRUE)
 @
 
-<<BLD_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE>>=
+<<BLD_Logistic_Model1_Table_of_Deviance_kable, results='asis', echo=FALSE, message=FALSE, error=FALSE>>=
 
 BLD_model_anova <- anova(BLD_model1, test="Chisq")
 stargazer(BLD_model_anova, title = "BLD: Analysis of Deviance", align = TRUE)
 @
 
-<<BLD_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
+<<BLD_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE, error=FALSE>>=
 BLD_model_pR2 <- pR2(BLD_model1)
 stargazer(BLD_model_pR2, title="BLD: McFadden Statistic:similar to R2", align=TRUE)
 @
 
-<<Logistic_Model1_Overdisperson_BLD, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+<<Logistic_Model1_Overdisperson_BLD, results='asis', echo=FALSE, message=FALSE, warning=FALSE, error=FALSE>>=
 require(AER)
 over_disp_BLD <- dispersiontest(BLD_model1, trafo=1)
 
@@ -253,15 +286,8 @@ over_disp_BLD <- as.data.frame(over_disp_BLD)
 stargazer(over_disp_BLD, summary=FALSE, title="BLD Overdisperson Test", align=TRUE)
 @
 
+
 <<CHS_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
-
-
-# junk <- alldata[ which(alldata$County_ID == 'CHS')]
-
-# CHS_Junk <- as.integer(junk$Tax_Units_reported)
-
-# 
-
 
 CHS_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "CHS")
 
@@ -287,12 +313,12 @@ over_disp_CHS <- unclass(over_disp_CHS)
 over_disp_CHS <- as.data.frame(over_disp_CHS)
 
 
-stargazer(over_disp_CHS, summary=FALSE, title="BLD Overdisperson Test", align=TRUE)
+stargazer(over_disp_CHS, summary=FALSE, title="CHS Overdisperson Test", align=TRUE)
 @
 
 <<GVL_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-GVL_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "GVL")
+GVL_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "GVL")
 
 stargazer(GVL_model1, title="GVL Regression Results: HUD Housing", align=TRUE)
 @
@@ -308,9 +334,22 @@ GVL_model_pR2 <- pR2(GVL_model1)
 stargazer(GVL_model_pR2, title="GVL: McFadden Statistic:similar to R2", align=TRUE)
 @
 
+<<Logistic_Model1_Overdisperson_GVL, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_GVL <- dispersiontest(GVL_model1, trafo=1)
+
+over_disp_GVL <- unclass(over_disp_GVL)
+over_disp_GVL <- as.data.frame(over_disp_GVL)
+
+
+stargazer(over_disp_GVL, summary=FALSE, title="GVL Overdisperson Test", align=TRUE)
+@
+
+
+
 <<LDN_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-LDN_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "LDN")
+LDN_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "LDN")
 
 stargazer(LDN_model1, title="LDN Regression Results: HUD Housing", align=TRUE)
 @
@@ -326,10 +365,21 @@ LDN_model_pR2 <- pR2(LDN_model1)
 stargazer(LDN_model_pR2, title="LDN: McFadden Statistic:similar to R2", align=TRUE)
 @
 
+<<Logistic_Model1_Overdisperson_LDN, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_LDN <- dispersiontest(LDN_model1, trafo=1)
+
+over_disp_LDN <- unclass(over_disp_LDN)
+over_disp_LDN <- as.data.frame(over_disp_LDN)
+
+
+stargazer(over_disp_LDN, summary=FALSE, title="LDN Overdisperson Test", align=TRUE)
+@
+
 
 <<LEB_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-LEB_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "LEB")
+LEB_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "LEB")
 
 stargazer(LEB_model1, title="LEB Regression Results: HUD Housing", align=TRUE)
 @
@@ -345,10 +395,21 @@ LEB_model_pR2 <- pR2(LEB_model1)
 stargazer(LEB_model_pR2, title="LEB: McFadden Statistic:similar to R2", align=TRUE)
 @
 
+<<Logistic_Model1_Overdisperson_LEB, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_LEB <- dispersiontest(LEB_model1, trafo=1)
+
+over_disp_LEB <- unclass(over_disp_LEB)
+over_disp_LEB <- as.data.frame(over_disp_LEB)
+
+
+stargazer(over_disp_LEB, summary=FALSE, title="LEB Overdisperson Test", align=TRUE)
+@
+
 
 <<MES_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-MES_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "MES")
+MES_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "MES")
 
 stargazer(MES_model1, title="MES Regression Results: HUD Housing", align=TRUE)
 @
@@ -364,10 +425,21 @@ MES_model_pR2 <- pR2(MES_model1)
 stargazer(MES_model_pR2, title="MES: McFadden Statistic:similar to R2", align=TRUE)
 @
 
+<<Logistic_Model1_Overdisperson_MES, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_MES <- dispersiontest(MES_model1, trafo=1)
+
+over_disp_MES <- unclass(over_disp_MES)
+over_disp_MES <- as.data.frame(over_disp_MES)
+
+
+stargazer(over_disp_MES, summary=FALSE, title="MES Overdisperson Test", align=TRUE)
+@
+
 
 <<SAC_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-SAC_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "SAC")
+SAC_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "SAC")
 
 stargazer(SAC_model1, title="SAC Regression Results: HUD Housing", align=TRUE)
 @
@@ -383,10 +455,21 @@ SAC_model_pR2 <- pR2(SAC_model1)
 stargazer(SAC_model_pR2, title="SAC: McFadden Statistic:similar to R2", align=TRUE)
 @
 
+<<Logistic_Model1_Overdisperson_SAC, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_SAC <- dispersiontest(SAC_model1, trafo=1)
+
+over_disp_SAC <- unclass(over_disp_SAC)
+over_disp_SAC <- as.data.frame(over_disp_SAC)
+
+
+stargazer(over_disp_CHS, summary=FALSE, title="SAC Overdisperson Test", align=TRUE)
+@
+
 
 <<SON_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-SON_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "SON")
+SON_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "SON")
 
 stargazer(SON_model1, title="SON Regression Results: HUD Housing", align=TRUE)
 @
@@ -402,10 +485,21 @@ SON_model_pR2 <- pR2(SON_model1)
 stargazer(SON_model_pR2, title="SON: McFadden Statistic:similar to R2", align=TRUE)
 @
 
+<<Logistic_Model1_Overdisperson_SON, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_SON <- dispersiontest(SON_model1, trafo=1)
+
+over_disp_SON <- unclass(over_disp_SON)
+over_disp_SON <- as.data.frame(over_disp_SON)
+
+
+stargazer(over_disp_SON, summary=FALSE, title="SON Overdisperson Test", align=TRUE)
+@
+
 
 <<WAS_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-WAS_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "WAS")
+WAS_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "WAS")
 
 stargazer(WAS_model1, title="WAS Regression Results: HUD Housing", align=TRUE)
 @
@@ -421,10 +515,21 @@ WAS_model_pR2 <- pR2(WAS_model1)
 stargazer(WAS_model_pR2, title="WAS: McFadden Statistic:similar to R2", align=TRUE)
 @
 
+<<Logistic_Model1_Overdisperson_WAS, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_WAS <- dispersiontest(WAS_model1, trafo=1)
+
+over_disp_WAS <- unclass(over_disp_WAS)
+over_disp_WAS <- as.data.frame(over_disp_WAS)
+
+
+stargazer(over_disp_WAS, summary=FALSE, title="WAS Overdisperson Test", align=TRUE)
+@
+
 
 <<YRK_Logistic_Model1, results='asis', echo=FALSE, message=FALSE>>=
 
-YRK_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=binomial(link='logit'),data = alldata, subset = alldata$County_ID == "YRK")
+YRK_model1 <- glm(CE_Present ~ Sec_8_Reported + Tax_Units_reported, family=poisson,data = alldata, subset = alldata$County_ID == "YRK")
 
 stargazer(YRK_model1, title="YRK Regression Results: HUD Housing", align=TRUE)
 @
@@ -438,6 +543,17 @@ stargazer(YRK_model_anova, title = "YRK: Analysis of Deviance", align = TRUE)
 <<YRK_Logistic_Model1_McFadden_Statistic, results='asis', echo=FALSE, message=FALSE>>=
 YRK_model_pR2 <- pR2(YRK_model1)
 stargazer(YRK_model_pR2, title="YRK: McFadden Statistic:similar to R2", align=TRUE)
+@
+
+<<Logistic_Model1_Overdisperson_YRK, results='asis', echo=FALSE, message=FALSE, warning=FALSE>>=
+require(AER)
+over_disp_YRK <- dispersiontest(CHS_model1, trafo=1)
+
+over_disp_YRK <- unclass(over_disp_YRK)
+over_disp_YRK <- as.data.frame(over_disp_YRK)
+
+
+stargazer(over_disp_YRK, summary=FALSE, title="YRK Overdisperson Test", align=TRUE)
 @
 
 

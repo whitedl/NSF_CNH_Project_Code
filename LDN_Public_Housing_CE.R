@@ -17,9 +17,9 @@ library(units)
 
 
 #----------------------- MAX Section 8 Housing Data by YEAR and Generate a DF by Census Tract ID --------------------------#
-# Data Directory: C:\Users\admin\Box Sync\Default Sync Folder\Projects\NSF_CNH\HUD_Analysis\Section8\LDN_AHD.csv
+# Data Directory: C:\Users\whitedl\Box Sync\Default Sync Folder\Projects\NSF_CNH\HUD_Analysis\Section8\LDN_AHD.csv
 
-LDN_AHD <- read.csv("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/Tables_In/LDN_HUD.csv", stringsAsFactors=FALSE)
+LDN_AHD <- read.csv("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/Tables_In/LDN_HUD.csv", stringsAsFactors=FALSE)
 LDN_AHD_MAX <- LDN_AHD %>% group_by(GIS_JOIN) %>% filter(YEAR == max(YEAR)) 
 LDN_AHD_Edit <- LDN_AHD_MAX  %>% select(Tract_Num = GIS_JOIN,YEAR,Sec_8_Reported = NUMBER_REPORTED)
 #Summarize the number of section 8 units as check compare to later.
@@ -29,7 +29,7 @@ sum(LDN_AHD_Edit$Sec_8_Reported,na.rm=T)
 
 
 #-------------------------- Read in the County Census Tract Polygon File --------------------------------------#
-LDN_Census_Poly <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "LDN_Census_Tract")
+LDN_Census_Poly <- sf:::st_read(dsn = "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "LDN_Census_Tract")
 LDN_Census_Poly$Tract_Num <- as.numeric(as.character(LDN_Census_Poly$GISJOIN2))
 str(LDN_Census_Poly)
 plot(LDN_Census_Poly)
@@ -48,9 +48,9 @@ attributes(LDN_Census_Poly)
 LDN_Census_AHD <- sp:::merge(LDN_Census_Poly, LDN_AHD_Edit)
 
 # Specifies parameters for shapefile export 
-#LDN_out_shape  = tempfile(pattern = "LDN_AHD_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
+#LDN_out_shape  = tempfile(pattern = "LDN_AHD_", tmpdir = "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
-sf:::st_write(LDN_Census_AHD, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/LDN_Census_AHD.shp", delete_layer=TRUE)
+sf:::st_write(LDN_Census_AHD, "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/LDN_Census_AHD.shp", delete_layer=TRUE)
 #Plot to Check 
 plot(LDN_Census_AHD[c("Sec_8_Reported")])
 sum(LDN_Census_AHD$Sec_8_Reported,na.rm=T)
@@ -61,7 +61,7 @@ sum(LDN_Census_AHD$Sec_8_Reported,na.rm=T)
 #------------------------------ Summarize and Merge Geocoded Tax Credit with Section 8 and add back to County Census Tract Poly ----------------------------------#
 
 #Open Geocoded Tax Credit
-LDN_TAX_point <- sf:::st_read(dsn = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "LDN_Tax_Credit")
+LDN_TAX_point <- sf:::st_read(dsn = "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In", layer = "LDN_Tax_Credit")
 
 #Checks to see if there are any duplicates in USER_HUD_ID_NUMBER, if so, need to examine 
 #further as there may be multiple years that need to be addressed. 
@@ -74,15 +74,15 @@ summarise(LDN_TAX_point, sum(USER_Low_I))
 LDN_AHD_Tax <- sf:::st_join(LDN_Census_AHD,LDN_TAX_point)
 
 #Export result to a shapefile
-#LDN_out_shape_TAX  = tempfile(pattern = "LDN_AHD_TAX_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
+#LDN_out_shape_TAX  = tempfile(pattern = "LDN_AHD_TAX_", tmpdir = "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
-sf::st_write(LDN_AHD_Tax, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/LDN_AHD_TAX.shp", delete_layer=TRUE)
+sf::st_write(LDN_AHD_Tax, "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/LDN_AHD_TAX.shp", delete_layer=TRUE)
 #Plot to Check 
 plot(LDN_AHD_Tax[c("Sec_8_Reported")])
 plot(LDN_AHD_Tax[c("USER_Numbe")])
 
-#The Spatial Join results in multiple points in a census tract. Need to summarize by census tract
-LDN_AHD_Tax_Sum <- LDN_AHD_Tax %>% group_by(Tract_Num) %>% summarise(Tax_Units_reported = sum(USER_Low_I))
+#The Spatial Join can result in multiple points in a census tract. Need to summarize by census tract
+LDN_AHD_Tax_Sum <- LDN_AHD_Tax %>% group_by(Tract_Num) %>% summarise(Tax_Units_reported = sum(USER_Low_I)) %>% replace(is.na(.), 0)
 LDN_AHD_Tax_Edit <- LDN_AHD_Tax  %>% select(Tract_Num,Sec_8_Reported) %>% distinct(Tract_Num, .keep_all = TRUE)
 
 #Generate tabular data. Drops geometry
@@ -117,14 +117,14 @@ ggplot() + geom_sf(data = LDN_AHD_Tax_spatial_join)
 #------------------------------ Merge Geocoded Tax Credit & Section 8 with CE ----------------------------------#
 
 # ---------------------- Geodatabase Feature Layer Import Resulted in the Wrong Data Type ----------------------#
-#gdb <- "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/Papers/NCED/NCED_CUCED_2018.gdb"
+#gdb <- "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/Papers/NCED/NCED_CUCED_2018.gdb"
 #LDN_CE_poly <- st_read(gdb, layer = "LDN_CE_data")
 #LDN_CE_poly <- st_transform(LDN_CE_poly, "+proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs")
 #ggplot() + geom_sf(data = LDN_CE_poly)
 #LDN_CE_poly <- st_cast(LDN_CE_poly, "MULTIPOLYGON")
 
 # --------------------- Use of Shapefile Results in Correct Data Type "Multipolygon" ------------------------#
-LDN_CE_poly <- st_read("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In/LDN_CE_data.shp")
+LDN_CE_poly <- st_read("C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_In/LDN_CE_data.shp")
 LDN_CE_poly <- st_transform(LDN_CE_poly, "+proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs")
 LDN_CE_poly_select <- LDN_CE_poly %>% select(geometry)
 ggplot() + geom_sf(data = LDN_CE_poly)
@@ -153,13 +153,13 @@ LDN_AHD_Tax_spatial_join_FINAL <- LDN_AHD_Tax_spatial_join %>% mutate(CE_Present
 ggplot() + geom_sf(data = LDN_AHD_Tax_spatial_join_FINAL)
 
 #Export result to a shapefile
-#LDN_AHD_Tax_spatial_join_FINAL_shp  = tempfile(pattern = "LDN_AHD_Tax_spatial_join_FINAL_", tmpdir = "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
+#LDN_AHD_Tax_spatial_join_FINAL_shp  = tempfile(pattern = "LDN_AHD_Tax_spatial_join_FINAL_", tmpdir = "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/CensusTract_2000", fileext = ".shp")
 # Exports to a Shapefile
-sf::st_write(LDN_AHD_Tax_spatial_join_FINAL, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/LDN_AHD_Tax_spatial_join_FINAL.shp",  delete_layer=TRUE)
+sf::st_write(LDN_AHD_Tax_spatial_join_FINAL, "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/ShapeFiles_Out/LDN_AHD_Tax_spatial_join_FINAL.shp",  delete_layer=TRUE)
 
 #Export data frame only
 LDN_AHD_Tax_spatial_join_FINAL_table <- dplyr::select(as.data.frame(LDN_AHD_Tax_spatial_join_FINAL), -geometry, -row.id)
-write.csv(LDN_AHD_Tax_spatial_join_FINAL_table, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/LDN_AHD_Tax_spatial_join_FINAL_table.csv" )
+write.csv(LDN_AHD_Tax_spatial_join_FINAL_table, "C:/Users/whitedl/Box Sync/Default Sync Folder/Projects/NSF_CNH/HUD_Analysis/FinalTables_Out/LDN_AHD_Tax_spatial_join_FINAL_table.csv" )
 
 #Drop geometry
 st_geometry(LDN_AHD_Tax_spatial_join_FINAL) <- NULL
