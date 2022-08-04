@@ -1,4 +1,5 @@
-# Example RMD file that generates a PDF report. Processes tabular data from ArcGIS GDB converts to tabular data and further processing follows. Generates charts and other products including running a LASSO analysis.
+# Example RMD file that generates a PDF report. Processes tabular data from ArcGIS GDB converts to tabular data and further processing follows. 
+# Generates charts and other products including running a LASSO analysis, and an exmaple beta regression.
 
 ---
 title: "ALB LASSO"
