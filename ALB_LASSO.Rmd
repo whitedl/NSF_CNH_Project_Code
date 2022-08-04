@@ -1,0 +1,327 @@
+---
+title: "ALB LASSO"
+author: "Dave White"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Report Generation
+```{r timestamp, echo=FALSE}
+paste0("Generated on: ", Sys.time())
+```
+
+```{r echo = FALSE, include=FALSE}
+# Libraries
+library(sf)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(glmnet)
+library(data.table)
+library(coefplot)
+library(fitdistrplus)
+library(caret)
+
+# Set Working Directory
+setwd("~/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/")
+#setwd("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1")
+```
+
+# Data Prep
+
+```{r data prep, echo=FALSE, include=FALSE}
+################################# Data Prep #############################################
+
+# Some parameters
+cnty <- "ALB"
+# where the data are as feature classes
+#gdb <- "/Users/davidwhite/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/HMI_v1.gdb"
+#gdb <- "/Users/davidwhite/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/HMI_v1.gdb"
+gdb <- "~/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/HMI_v1.gdb"
+#gdb <- "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/HMI_v1.gdb"
+# Prints feature classess in GDB
+st_layers(gdb)
+
+# fetch the data
+# Clemson CE data
+c_layer <- paste0(cnty, "_CE_HMI_mean")
+c_ce <- st_read(dsn = gdb, layer = c_layer, stringsAsFactors = F, quiet = TRUE)
+
+# Drop Geometry and results in a DF
+st_geometry(c_ce) <- NULL
+
+
+#Subsets by column the original DF
+#Subsets by column the original DF
+ALB_Lasso <- c_ce %>% dplyr::select(CE_InstNum, projectCID, HMI_mean, perim_area_ratio, shape_index, frac_dim, NEAR_DIST)
+
+#Join Reason Matrix from Stella
+ALB_reasons <- read.csv('~/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/ALB_CE_data_with_Reason_Variables.csv')
+
+#ALB_reasons <- read.csv("C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/ALB_CE_data_with_Reason_Variables.csv")
+
+# Left Join
+ALB_Lasso <- left_join(ALB_Lasso, ALB_reasons, by = "projectCID")
+
+#Adds a column
+ALB_Lasso['ALB_mean_round'] <- NA
+
+#Checking Datatypes
+str(ALB_Lasso)
+
+#Converts the original HMI mean value to numeric
+ALB_Lasso$ALB_mean_round <- as.numeric(as.character(ALB_Lasso$HMI_mean))
+
+#Verifying that data type conversion has worked
+str(ALB_Lasso)
+
+#Round the mean value to tenths and write to the new column
+ALB_Lasso$ALB_mean_round <- round(ALB_Lasso$ALB_mean_round, 5)
+
+glimpse(ALB_Lasso)
+```
+
+# Response HMI
+
+```{r, results='asis', echo=FALSE, include=TRUE}
+
+# Response
+y <-  ALB_Lasso$ALB_mean_round
+
+print('Response variable: ALB_Lasso$ALB_mean_round')
+
+```
+
+# Predictors
+
+```{r, results='asis', echo=FALSE, include=TRUE}
+# Predictor
+x <- data.matrix(ALB_Lasso[, c('Reason_For_CE_1','Reason_For_CE_2','Reason_For_CE_3','Reason_For_CE_4','Reason_For_CE_5','Reason_For_CE_6','Reason_For_CE_7','Reason_For_CE_8','Reason_For_CE_9','Reason_For_CE_10','Reason_For_CE_11','Reason_For_CE_12','Reason_For_CE_13','Reason_For_CE_14','Reason_For_CE_15','Reason_For_CE_16','Reason_For_CE_17','Reason_For_CE_18','Reason_For_CE_19','Reason_For_CE_20','Reason_For_CE_21','Reason_For_CE_22','Reason_For_CE_23','Reason_For_CE_24','Reason_For_CE_25','Reason_For_CE_26','Reason_For_CE_27','Reason_For_CE_28','Reason_For_CE_29','Reason_For_CE_30','Reason_For_CE_31','Reason_For_CE_3.1','Reason_For_CE_3.2','Reason_For_CE_3.3','NearCECty', 'perim_area_ratio', 'shape_index', 'frac_dim', 'county_ID', 'CEArea_Ac', 'NEAR_DIST')])
+
+print('Column Names for Predictors:')
+print(data.table(colnames(x)))
+
+```
+
+# Covariance Table
+
+```{r, results='asis', echo=FALSE, include=TRUE}
+
+################################# Covariance Table ###################################
+#Standardize the entire X data set
+
+# Preprocess Data min/max
+preproc <- caret::preProcess(x, method=c('range'))
+# Normalize 
+norm <- predict(preproc, x)
+# Calculate covariance matrix
+ALB_cov_matrix <- data.table(cov(norm))
+# Write to CSV
+write.csv(ALB_cov_matrix,'~/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/ALB_COV.csv')
+
+#write.csv(ALB_cov_matrix, "C:/Users/admin/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/ALB_COV.csv")
+
+print('Covariance matrix written to ~/Box Sync/Default Sync Folder/Projects/NSF_CNH/HMI/HMI_v1/ALB_COV.csv')
+
+
+```
+
+# Model
+
+```{r fit, echo=FALSE}
+
+# Lasso GLMNET model we will use the CV.GMLNET for cross-validation to determine lambda
+#fit.lasso = glmnet(x = x, y = y, standardize = TRUE, alpha = 1)
+
+# Plot the coefficients for different values of the penalty parameter
+# Each colored line is a different coefficient
+#plot(fit.lasso)
+# Plot the number of non-zero coefficient in the model as a function of the penalty paramter
+#plot(fit.lasso$df)
+# Extract the values of the coefficients
+#fit.lasso$beta # Generates a very large table
+
+
+# Perform k-fold cross-validation to find optimal lambda value (default is 10 folds)
+cv_model <- cv.glmnet(x, y, standardize = TRUE, alpha = 1)
+
+# Produce plot of test MSE by lambda value
+plot(cv_model) 
+
+# Print lambda.min and lambda.1se'
+print(paste('Lambda.1se:', cv_model$lambda.1se))
+print(paste('Lambda.Min:', cv_model$lambda.min))
+
+# Plot coefficients for .min and .1se
+coefplot(cv_model, lambda='lambda.min', sort='magnitude', title = 'Coefficient Plot Lambda.min')
+coefplot(cv_model, lambda='lambda.1se', sort='magnitude', title = 'Coefficient Plot Lambda.1se')
+
+
+```
+
+# #########################################################################
+#                             Beta Regression                             #
+# #########################################################################
+
+```{r beta_regression, echo=FALSE}
+library (betareg)
+
+ALB_Beta <- subset(ALB_Lasso, ALB_Lasso$ALB_mean_round < 1)
+
+x_beta <- data.matrix(ALB_Lasso[, c('Reason_For_CE_4','Reason_For_CE_6','Reason_For_CE_7','Reason_For_CE_10','Reason_For_CE_11','Reason_For_CE_13','Reason_For_CE_24','Reason_For_CE_25','Reason_For_CE_26','Reason_For_CE_28','Reason_For_CE_29','Reason_For_CE_30','Reason_For_CE_3.2','Reason_For_CE_3.3', 'NearCECty', 'perim_area_ratio', 'shape_index', 'CEArea_Ac')])
+
+# Response
+y_beta <-  ALB_Beta$ALB_mean_round
+
+# print(y_beta)
+
+beta_model <- betareg(y_beta ~ ALB_Beta$CEArea_Ac + ALB_Beta$perim_area_ratio + ALB_Beta$NearCECty + ALB_Beta$Reason_For_CE_7 + ALB_Beta$Reason_For_CE_3.2) # train model. Tune var names
+
+summary(beta_model)
+
+
+
+```
+
+```{r beta_regression_tree, echo=FALSE}
+library (betareg)
+
+ALB_Beta <- subset(ALB_Lasso, ALB_Lasso$ALB_mean_round < 1)
+
+# x_beta <- data.matrix(ALB_Lasso[, c('Reason_For_CE_4','Reason_For_CE_6','Reason_For_CE_7','Reason_For_CE_10','Reason_For_CE_11','Reason_For_CE_13','Reason_For_CE_24','Reason_For_CE_25','Reason_For_CE_26','Reason_For_CE_28','Reason_For_CE_29','Reason_For_CE_30','Reason_For_CE_3.2','Reason_For_CE_3.3', 'NearCECty', 'perim_area_ratio', 'shape_index', 'CEArea_Ac')])
+
+# Response
+# y_beta <-  ALB_Beta$ALB_mean_round
+
+# print(y_beta)
+
+beta_model <- betatree(y_beta ~ NearCECty + perim_area_ratio | Reason_For_CE_4 + Reason_For_CE_6, data = ALB_Beta) # train model. Tune var names
+
+summary(beta_model)
+
+plot(beta_model)
+
+
+  # ## data with two groups of dyslexic and non-dyslexic children
+  #   data("ReadingSkills", package = "betareg")
+  #   ## additional random noise (not associated with reading scores)
+  #   set.seed(1071)
+  #   ReadingSkills$x1 <- rnorm(nrow(ReadingSkills))
+  #   ReadingSkills$x2 <- runif(nrow(ReadingSkills))
+  #   ReadingSkills$x3 <- factor(rnorm(nrow(ReadingSkills)) > 0)
+  #   
+  #   ## fit beta regression tree: in each node
+  #   ##   - accurcay's mean and precision depends on iq
+  #   ##   - partitioning is done by dyslexia and the noise variables x1, x2, x3
+  #   ## only dyslexia is correctly selected for splitting
+  #   bt <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
+  #     data = ReadingSkills, minsize = 10)
+  #   plot(bt)
+
+
+```
+
+
+
+
+
+# ##########################################################################
+# Predicted lambda.1se # Do not USE. Needs to be applied to a new data set.#
+# ##########################################################################
+
+```{r pred_1se, echo=FALSE}
+#####################3 Predicting values and computing an R2 value for the data we trained on ############################# https://www.andreaperlato.com/mlpost/deal-multicollinearity-with-lasso-regression/
+y_hat_1se <- predict(cv_model, s = cv_model$lambda.1se, newx = x) # newx contanins the matrix of the predicted values
+
+print('y_hat_1se <- predict(cv_model, s = cv_model$lambda.1se, newx = x)')
+
+# Sum of Squares Total and Error
+sst <- sum(y^2)
+sse <- sum((y_hat_1se - y)^2)
+
+# R squared
+rsq_1se <- 1 - sse / sst
+print(paste("Predicted Model R^2:", rsq_1se))
+
+```
+
+# Predicted lambda.min. # Do not USE. Needs to be applied to a new data set.
+
+```{r pred_min, echo=FALSE}
+#####################3 Predicting values and computing an R2 value for the data we trained on ############################# https://www.andreaperlato.com/mlpost/deal-multicollinearity-with-lasso-regression/
+y_hat_min <- predict(cv_model, s = cv_model$lambda.min, newx = x) # newx contanins the matrix of the predicted values
+
+print('y_hat_min <- predict(cv_model, s = cv_model$lambda.min, newx = x)')
+
+# Sum of Squares Total and Error
+sst <- sum(y^2)
+sse <- sum((y_hat_min - y)^2)
+
+# R squared
+rsq_min <- 1 - sse / sst
+print(paste("Predicted Model R^2:", rsq_min))
+
+```
+
+# Residual Plot
+
+```{r res, echo=FALSE}
+
+# Predicted Residuals
+res <- y - y_hat_min
+
+plot(res ~ y_hat_min)
+
+# QQPlot Residuals
+
+qqnorm(res)
+
+```
+
+
+# Standardize of X Model 
+
+```{r std, echo=FALSE}
+
+# standardize X
+x_std <- scale(x, center = TRUE, scale = TRUE)
+
+```
+
+
+
+```{r fit_std, echo=FALSE}
+
+# Lasso GLMNET model we will use the CV.GMLNET for cross-validation to determine lambda
+#fit.lasso = glmnet(x = x, y = y, standardize = TRUE, alpha = 1)
+
+# Plot the coefficients for different values of the penalty parameter
+# Each colored line is a different coefficient
+#plot(fit.lasso)
+# Plot the number of non-zero coefficient in the model as a function of the penalty paramter
+#plot(fit.lasso$df)
+# Extract the values of the coefficients
+#fit.lasso$beta # Generates a very large table
+
+
+# Perform k-fold cross-validation to find optimal lambda value (default is 10 folds)
+cv_model <- cv.glmnet(x_std, y, standardize = FALSE, alpha = 1)
+
+# Produce plot of test MSE by lambda value
+plot(cv_model) 
+
+# Print lambda.min and lambda.1se'
+print(paste('Lambda.1se:', cv_model$lambda.1se))
+print(paste('Lambda.Min:', cv_model$lambda.min))
+
+# Plot coefficients for .min and .1se
+coefplot(cv_model, lambda='lambda.min', sort='magnitude', title = 'Standardized Coefficient Plot Lambda.min')
+coefplot(cv_model, lambda='lambda.1se', sort='magnitude', title = 'Standardized Coefficient Plot Lambda.1se')
+
+
+```
