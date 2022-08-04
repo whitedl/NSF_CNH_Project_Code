@@ -1,3 +1,8 @@
+# By David L. White
+# 08/03/2022
+# This script runs a loop and processes several county data sets from ArcGIS Geodatabase. This allows for the processing from basic descriptive statistics
+# to models. This particular version builds a box plot graph for each county in a single figure. 
+
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
